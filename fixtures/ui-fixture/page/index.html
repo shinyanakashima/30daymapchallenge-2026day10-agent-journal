@@ -1,0 +1,46 @@
+<!doctype html>
+<!-- UI fixture page. Synthetic shapes only; it is not a map of real data and not part of an AI session. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>UI fixture frame</title>
+<style>
+  html, body { margin: 0; width: 1200px; height: 900px; overflow: hidden; background: #eef1ee; font: 16px/1.4 "DejaVu Sans", sans-serif; color: #222; }
+  svg { display: block; }
+  .tag { position: absolute; left: 24px; top: 20px; background: #222; color: #fff; padding: 6px 10px; font-size: 14px; letter-spacing: .04em; }
+  .title { position: absolute; left: 24px; bottom: 28px; font-size: 30px; font-weight: bold; }
+  .legend { position: absolute; right: 28px; bottom: 28px; background: #fff; border: 1px solid #bbb; padding: 10px 14px; font-size: 15px; }
+  .legend i { display: inline-block; width: 14px; height: 14px; border-radius: 50%; margin-right: 6px; vertical-align: -2px; }
+</style>
+</head>
+<body>
+<svg id="m" width="1200" height="900" viewBox="0 0 1200 900"></svg>
+<div class="tag">UI FIXTURE · synthetic shapes · not real data</div>
+<script>
+  const v = Number(new URLSearchParams(location.search).get('v') || 1);
+  const svg = document.getElementById('m');
+  const ns = 'http://www.w3.org/2000/svg';
+  const el = (name, attrs) => { const e = document.createElementNS(ns, name); for (const k in attrs) e.setAttribute(k, attrs[k]); svg.appendChild(e); return e; };
+  // graticule
+  for (let x = 0; x <= 1200; x += 100) el('line', { x1: x, y1: 0, x2: x, y2: 900, stroke: '#d6dbd6' });
+  for (let y = 0; y <= 900; y += 100) el('line', { x1: 0, y1: y, x2: 1200, y2: y, stroke: '#d6dbd6' });
+  // an abstract landmass (deterministic polygon)
+  const pts = [];
+  for (let i = 0; i < 36; i++) {
+    const a = (i / 36) * Math.PI * 2;
+    const r = 300 + 40 * Math.sin(a * 3) + 25 * Math.cos(a * 5);
+    pts.push(`${600 + r * Math.cos(a) * 1.25},${450 + r * Math.sin(a) * 0.95}`);
+  }
+  el('polygon', { points: pts.join(' '), fill: v >= 3 ? '#d9e4c8' : '#e3e6dc', stroke: '#5a6b4f', 'stroke-width': 2 });
+  if (v >= 2) {
+    const dots = [[420,380,18],[530,300,10],[650,470,26],[760,360,14],[700,600,12],[480,560,20],[860,520,8],[590,620,16]];
+    for (const [x, y, r] of dots) el('circle', { cx: x, cy: y, r, fill: v >= 3 ? '#c4512d' : '#3a6ea5', 'fill-opacity': .8, stroke: '#fff', 'stroke-width': 1.5 });
+  }
+  if (v >= 3) {
+    const t = document.createElement('div'); t.className = 'title'; t.textContent = 'Fixture frame 3 · title and legend'; document.body.appendChild(t);
+    const l = document.createElement('div'); l.className = 'legend'; l.innerHTML = '<i style="background:#c4512d"></i>synthetic points'; document.body.appendChild(l);
+  }
+  window.__mapReady = true;
+</script>
+</body>
+</html>

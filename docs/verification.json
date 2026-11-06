@@ -1,0 +1,186 @@
+{
+  "checkedAt": "2026-11-06T11:59:54.547Z",
+  "session": "ui-fixture",
+  "sessionKind": "fixture",
+  "browser": "chromium 153.0.8010.12",
+  "zarrita": "0.7.5",
+  "codec": "bytes -> gzip(level=6)",
+  "sizes": {
+    "frames": 3,
+    "rawBytes": 12960000,
+    "chunkBytes": 163245,
+    "pngBytes": 133123
+  },
+  "passed": 24,
+  "failed": 0,
+  "results": [
+    {
+      "name": "initial load shows first step",
+      "ok": true,
+      "state": "ready",
+      "stepId": "s01-outline",
+      "frameIndex": "0",
+      "logStepId": "s01-outline",
+      "visibleSteps": 1,
+      "lastMsg": "[UI fixture placeholder] Added the grid and an outline polygon.",
+      "scrub": 0
+    },
+    {
+      "name": "initial load fetches only first frame and one neighbour",
+      "ok": true,
+      "chunks": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "unused codecs are not downloaded",
+      "ok": true,
+      "codecChunks": []
+    },
+    {
+      "name": "no page errors on load",
+      "ok": true,
+      "errors": []
+    },
+    {
+      "name": "frame 0 (s01-outline) RGBA hash and size match original PNG",
+      "ok": true,
+      "browser": "094c10f044676f75",
+      "original": "094c10f044676f75",
+      "size": "1200x900"
+    },
+    {
+      "name": "frame 1 (s02-points) RGBA hash and size match original PNG",
+      "ok": true,
+      "browser": "d2e3dcd59010eb7d",
+      "original": "d2e3dcd59010eb7d",
+      "size": "1200x900"
+    },
+    {
+      "name": "frame 2 (s04-legend) RGBA hash and size match original PNG",
+      "ok": true,
+      "browser": "fdd9cc110770fa01",
+      "original": "fdd9cc110770fa01",
+      "size": "1200x900"
+    },
+    {
+      "name": "step 1 s01-outline (success, frame 0) aligned",
+      "ok": true,
+      "state": "ready",
+      "logStepId": "s01-outline"
+    },
+    {
+      "name": "step 2 s02-points (success, frame 1) aligned",
+      "ok": true,
+      "state": "ready",
+      "logStepId": "s02-points"
+    },
+    {
+      "name": "step 3 s03-build-failed (error, frame null) aligned",
+      "ok": true,
+      "state": "failed-step",
+      "logStepId": "s03-build-failed"
+    },
+    {
+      "name": "step 4 s04-legend (success, frame 2) aligned",
+      "ok": true,
+      "state": "ready",
+      "logStepId": "s04-legend"
+    },
+    {
+      "name": "step 5 s05-review (success, frame null) aligned",
+      "ok": true,
+      "state": "no-capture",
+      "logStepId": "s05-review"
+    },
+    {
+      "name": "every move fetches at most the selected and one adjacent frame",
+      "ok": true,
+      "chunkRequestsPerMove": [
+        0,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "name": "walking all steps fetched each frame at most once",
+      "ok": true,
+      "chunkRequests": 3,
+      "frames": 3
+    },
+    {
+      "name": "slow earlier frame does not replace the newer selection",
+      "ok": true,
+      "selected": "s02-points",
+      "state": "ready"
+    },
+    {
+      "name": "rapid key presses end on the selected step",
+      "ok": true,
+      "scrub": 3,
+      "stepId": "s04-legend",
+      "state": "ready"
+    },
+    {
+      "name": "fast timeline drag ends on the selected step",
+      "ok": true,
+      "visited": [
+        4,
+        3,
+        2,
+        1,
+        0
+      ],
+      "scrub": 1,
+      "stepId": "s02-points",
+      "state": "ready"
+    },
+    {
+      "name": "corrupt chunk shows a load/decode error with retry",
+      "ok": true,
+      "state": "decode-error"
+    },
+    {
+      "name": "missing chunk shows a load/decode error with retry",
+      "ok": true,
+      "state": "decode-error"
+    },
+    {
+      "name": "missing session shows a session error",
+      "ok": true,
+      "state": "session-error"
+    },
+    {
+      "name": "Home/End keys",
+      "ok": true,
+      "end": 4,
+      "home": 0
+    },
+    {
+      "name": "Space starts and stops playback; playback advances",
+      "ok": true,
+      "pressed": "true",
+      "advanced": 1,
+      "stopped": "false"
+    },
+    {
+      "name": "language switch to Japanese",
+      "ok": true,
+      "lang": "ja",
+      "counter": "工程 2 / 5"
+    },
+    {
+      "name": "mobile: image, conversation, timeline stacked without horizontal scroll",
+      "ok": true,
+      "overflowX": 0,
+      "stageY": 160,
+      "sideY": 450.5,
+      "controlsY": 562.5,
+      "controlsBottom": 0,
+      "stageW": 358,
+      "vw": 390
+    }
+  ]
+}

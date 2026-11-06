@@ -1,0 +1,10 @@
+{
+  "url": "fixtures/ui-fixture/page/index.html?v=2",
+  "capturedAt": "2026-11-06T11:51:45.315Z",
+  "browser": "chromium 153.0.8010.12",
+  "viewport": {
+    "width": 1200,
+    "height": 900
+  },
+  "deviceScaleFactor": 1
+}

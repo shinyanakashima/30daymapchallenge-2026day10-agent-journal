@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Map Rewind · 30DayMapChallenge 2026 Day 10</title>
+  <meta name="description" content="Replay of an AI map-making session: prompts, responses and the screen at each step.">
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <div id="app" class="app" data-state="loading">
+   <div class="screen">
+    <header class="top">
+      <h1 class="title"><span id="title">Map Rewind</span> <small>30DayMapChallenge 2026 · Day 10 · Prompting only</small></h1>
+      <button id="lang" class="lang" type="button" lang="ja">日本語</button>
+    </header>
+    <p id="fixture" class="fixture" hidden></p>
+
+    <main class="stage-wrap">
+      <figure class="stage" id="stage" data-state="loading" aria-live="polite">
+        <canvas id="frame" width="1200" height="900" role="img" aria-label=""></canvas>
+        <div class="stage-msg" id="stage-msg"></div>
+        <figcaption class="stage-cap" id="stage-cap"></figcaption>
+      </figure>
+    </main>
+
+    <aside class="side" id="side" aria-labelledby="side-h">
+      <h2 id="side-h" class="side-h">Conversation up to this step</h2>
+      <ol class="log" id="log"></ol>
+    </aside>
+
+    <nav class="controls" id="controls" aria-label="Timeline">
+      <div class="buttons">
+        <button id="prev" type="button" aria-label="Previous step">◀</button>
+        <button id="play" type="button" aria-pressed="false" aria-label="Play">▶</button>
+        <button id="next" type="button" aria-label="Next step">▶︎▶︎</button>
+        <span class="counter" id="counter">–</span>
+      </div>
+      <div class="track">
+        <input id="scrub" type="range" min="0" max="0" step="1" value="0" aria-label="Timeline">
+        <div class="ticks" id="ticks" aria-hidden="true"></div>
+      </div>
+    </nav>
+   </div>
+
+    <footer class="foot" id="foot"></footer>
+  </div>
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>

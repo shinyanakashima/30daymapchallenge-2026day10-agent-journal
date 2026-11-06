@@ -1,0 +1,4 @@
+[UI fixture placeholder — synthetic error text]
+$ npm run build
+src/map.ts:42:7 - error TS2339: Property 'fillColour' does not exist on type 'PointStyle'.
+Found 1 error.

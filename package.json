@@ -1,0 +1,20 @@
+{
+  "name": "30daymapchallenge-2026day10-agent-journal",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "verify": "node scripts/verify-browser.mjs",
+    "screenshot": "node scripts/screenshot.mjs"
+  },
+  "dependencies": {
+    "zarrita": "0.7.5"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "vite": "8.3.6"
+  }
+}

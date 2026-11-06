@@ -1,0 +1,5 @@
+# Offline conversion only. Viewers of the published site do not need Python.
+zarr==3.4.2
+numcodecs==0.17.1
+Pillow==13.0.0
+numpy>=2.0

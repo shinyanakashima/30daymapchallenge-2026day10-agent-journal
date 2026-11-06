@@ -1,0 +1,46 @@
+{
+  "sessionId": "ui-fixture",
+  "zarrPython": "3.4.2",
+  "codec": "bytes -> gzip(level=6)",
+  "frames": [
+    {
+      "frameIndex": 0,
+      "stepId": "s01-outline",
+      "source": "captures/frame-1.png",
+      "width": 1200,
+      "height": 900,
+      "rgbaSha256": "094c10f044676f750db7ad3b7fca36b304e10c11f9b2238e9a913ea50ddc7a1f",
+      "rawBytes": 4320000,
+      "chunkBytes": 46425,
+      "pngBytes": 35705
+    },
+    {
+      "frameIndex": 1,
+      "stepId": "s02-points",
+      "source": "captures/frame-2.png",
+      "width": 1200,
+      "height": 900,
+      "rgbaSha256": "d2e3dcd59010eb7daf328b4f7619cbc8a1957d349b2f04077c9d94c3300ccb18",
+      "rawBytes": 4320000,
+      "chunkBytes": 54291,
+      "pngBytes": 44098
+    },
+    {
+      "frameIndex": 2,
+      "stepId": "s04-legend",
+      "source": "captures/frame-3.png",
+      "width": 1200,
+      "height": 900,
+      "rgbaSha256": "fdd9cc110770fa01e10dcd285cb90f4a99d95fafa28bbceaf5156981835676b7",
+      "rawBytes": 4320000,
+      "chunkBytes": 62529,
+      "pngBytes": 53320
+    }
+  ],
+  "totals": {
+    "frames": 3,
+    "rawBytes": 12960000,
+    "chunkBytes": 163245,
+    "pngBytes": 133123
+  }
+}

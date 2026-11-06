@@ -1,0 +1,6 @@
+{
+  "default": "ui-fixture",
+  "sessions": [
+    { "id": "ui-fixture", "kind": "fixture" }
+  ]
+}

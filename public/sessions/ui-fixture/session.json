@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "id": "ui-fixture",
+  "kind": "fixture",
+  "title": {
+    "en": "UI fixture (not the production session)",
+    "ja": "UI確認用fixture（本番の制作記録ではありません）"
+  },
+  "model": null,
+  "recording": {
+    "en": "Fixture for testing the player. Frames are real 1200×900 screenshots of a synthetic test page (fixtures/ui-fixture/page). Message text is placeholder text, not a recorded AI conversation.",
+    "ja": "再生UIの確認用です。画像は合成テストページ（fixtures/ui-fixture/page）を1200×900で実際に撮影したものです。会話文は仮の文章で、AIとの実際の対話記録ではありません。"
+  },
+  "dataSources": [
+    {
+      "name": {
+        "en": "None. Synthetic shapes drawn by the fixture page.",
+        "ja": "なし（fixtureページが描いた合成図形）"
+      },
+      "license": null,
+      "url": null
+    }
+  ],
+  "viewport": {
+    "width": 1200,
+    "height": 900,
+    "deviceScaleFactor": 1
+  },
+  "frames": {
+    "path": "frames.zarr",
+    "count": 3,
+    "shape": [
+      3,
+      900,
+      1200,
+      4
+    ],
+    "dtype": "uint8",
+    "channels": "RGBA",
+    "dimensionNames": [
+      "step",
+      "y",
+      "x",
+      "channel"
+    ],
+    "chunks": [
+      1,
+      900,
+      1200,
+      4
+    ],
+    "codecs": [
+      "bytes",
+      "gzip(level=6)"
+    ]
+  },
+  "steps": [
+    {
+      "stepId": "s01-outline",
+      "frameIndex": 0,
+      "timestamp": "2026-11-06T11:51:44Z",
+      "status": "success",
+      "changeSummary": {
+        "en": "Grid and one outline polygon.",
+        "ja": "グリッドと外形ポリゴンを1つ。"
+      },
+      "revision": null,
+      "messages": [
+        {
+          "role": "user",
+          "content": "[UI fixture placeholder] Draw a background grid and one outline."
+        },
+        {
+          "role": "assistant",
+          "content": "[UI fixture placeholder] Added the grid and an outline polygon."
+        }
+      ]
+    },
+    {
+      "stepId": "s02-points",
+      "frameIndex": 1,
+      "timestamp": "2026-11-06T11:51:45Z",
+      "status": "success",
+      "changeSummary": {
+        "en": "Eight proportional points added.",
+        "ja": "大きさの異なる点を8つ追加。"
+      },
+      "revision": null,
+      "messages": [
+        {
+          "role": "user",
+          "content": "[UI fixture placeholder] Add points sized by value."
+        },
+        {
+          "role": "assistant",
+          "content": "[UI fixture placeholder] Added eight circles inside the outline."
+        }
+      ]
+    },
+    {
+      "stepId": "s03-build-failed",
+      "frameIndex": null,
+      "timestamp": "2026-11-06T11:51:45Z",
+      "status": "error",
+      "changeSummary": {
+        "en": "Build failed; no screen was captured.",
+        "ja": "ビルド失敗。画面は撮影していない。"
+      },
+      "revision": null,
+      "messages": [
+        {
+          "role": "user",
+          "content": "[UI fixture placeholder] Change the point colour and add a legend."
+        },
+        {
+          "role": "tool",
+          "content": "[UI fixture placeholder — synthetic error text]\n$ npm run build\nsrc/map.ts:42:7 - error TS2339: Property 'fillColour' does not exist on type 'PointStyle'.\nFound 1 error.",
+          "label": "build"
+        },
+        {
+          "role": "assistant",
+          "content": "[UI fixture placeholder] The property name was wrong. Fixing it."
+        }
+      ]
+    },
+    {
+      "stepId": "s04-legend",
+      "frameIndex": 2,
+      "timestamp": "2026-11-06T11:51:46Z",
+      "status": "success",
+      "changeSummary": {
+        "en": "Colour fixed; title and legend added.",
+        "ja": "色を修正し、題名と凡例を追加。"
+      },
+      "revision": null,
+      "messages": [
+        {
+          "role": "assistant",
+          "content": "[UI fixture placeholder] Renamed the property, rebuilt, and added a title and legend."
+        }
+      ]
+    },
+    {
+      "stepId": "s05-review",
+      "frameIndex": null,
+      "timestamp": null,
+      "status": "success",
+      "changeSummary": {
+        "en": "Review only; no screen captured.",
+        "ja": "確認のみ。画面は撮影していない。"
+      },
+      "revision": null,
+      "messages": [
+        {
+          "role": "user",
+          "content": "[UI fixture placeholder] Looks fine. No more changes."
+        },
+        {
+          "role": "note",
+          "content": "[UI fixture placeholder] Discussion-only step without a capture."
+        }
+      ]
+    }
+  ]
+}
