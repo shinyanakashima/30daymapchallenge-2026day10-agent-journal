@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-11-09T03:43:41.186Z",
+  "checkedAt": "2026-11-09T03:52:18.217Z",
   "session": "ui-fixture",
   "sessionKind": "fixture",
   "browser": "chromium 153.0.8010.12",
@@ -10,7 +10,7 @@
     "rawBytes": 12960000,
     "chunkBytes": 163245,
     "pngBytes": 133123,
-    "thumbChunkBytes": 21348
+    "thumbChunkBytes": 61298
   },
   "passed": 31,
   "failed": 0,
@@ -35,7 +35,7 @@
       ]
     },
     {
-      "name": "unused codecs are not downloaded",
+      "name": "unused codecs and the layers view code are not downloaded",
       "ok": true,
       "codecChunks": []
     },
@@ -184,43 +184,41 @@
       "vw": 390
     },
     {
-      "name": "cube view: C key switches, all thumbnails loaded once, no extra full frames",
+      "name": "layers view: three.js is loaded only when the view opens",
+      "ok": true,
+      "stackBefore": 0,
+      "stackAfter": 1
+    },
+    {
+      "name": "layers view: thumbnails fetched once each, no extra full frames",
       "ok": true,
       "thumbChunkRequests": 3,
       "fullFrameRequestsAdded": 0
     },
     {
-      "name": "cube view: one layer per step up to the selected step, drawn",
+      "name": "layers view: one label per step, captured layers up to the selected step",
       "ok": true,
-      "layers": 5,
-      "visible": true,
-      "painted": 49222,
-      "view": "cube"
+      "layers": 3,
+      "labels": 5
     },
     {
-      "name": "cube thumbnails decode to the converter hashes",
+      "name": "layer thumbnails decode to the converter hashes",
       "ok": true,
       "frames": 3
     },
     {
-      "name": "cube: clicking a layer opens that step",
+      "name": "layers: clicking a step label opens that step",
       "ok": true,
-      "selected": "s03-build-failed"
+      "selected": "s02-points",
+      "layers": 2
     },
     {
-      "name": "cube: clicking the map sets a cut; double-click resets it",
+      "name": "layers: drag turns the view and keeps the step",
       "ok": true,
-      "cutBefore": "1200,0",
-      "cutAfter": "460,446",
-      "cutReset": "1200,0"
+      "step": "s02-points"
     },
     {
-      "name": "cube: drag rotates and keeps the step",
-      "ok": true,
-      "step": "s03-build-failed"
-    },
-    {
-      "name": "cube: no page errors",
+      "name": "layers: no page errors",
       "ok": true,
       "errors": []
     }

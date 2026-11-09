@@ -59,16 +59,16 @@
     "count": 3,
     "shape": [
       3,
-      225,
-      300,
+      450,
+      600,
       4
     ],
     "dtype": "uint8",
     "channels": "RGBA",
     "chunks": [
       1,
-      225,
-      300,
+      450,
+      600,
       4
     ],
     "resampling": "box"

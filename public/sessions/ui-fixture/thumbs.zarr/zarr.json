@@ -1,8 +1,8 @@
 {
   "shape": [
     3,
-    225,
-    300,
+    450,
+    600,
     4
   ],
   "data_type": "uint8",
@@ -11,8 +11,8 @@
     "configuration": {
       "chunk_shape": [
         1,
-        225,
-        300,
+        450,
+        600,
         4
       ]
     }
@@ -37,7 +37,7 @@
   ],
   "attributes": {
     "channels": "RGBA",
-    "note": "Box-downsampled copy of frames.zarr for the cube view."
+    "note": "Box-downsampled copy of frames.zarr for the layers view."
   },
   "dimension_names": [
     "step",

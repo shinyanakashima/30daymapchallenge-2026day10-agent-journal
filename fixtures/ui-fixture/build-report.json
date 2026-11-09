@@ -13,8 +13,8 @@
       "rawBytes": 4320000,
       "chunkBytes": 46425,
       "pngBytes": 35705,
-      "thumbRgbaSha256": "74a423846f9ab202374845a8f62f87ea94645865e4100a28498cbd99bba503b0",
-      "thumbChunkBytes": 5693
+      "thumbRgbaSha256": "7dc611041cff4651f6a1904497449eb5c443da9ae48021ab1a00dcf0958ad6e5",
+      "thumbChunkBytes": 17063
     },
     {
       "frameIndex": 1,
@@ -26,8 +26,8 @@
       "rawBytes": 4320000,
       "chunkBytes": 54291,
       "pngBytes": 44098,
-      "thumbRgbaSha256": "50af0c0d1d10e82faa14162eb513ef44d1d01e68ec9540bbe27b1f60772ee659",
-      "thumbChunkBytes": 6760
+      "thumbRgbaSha256": "6c60522125177a579f3d972f80357cc2a2e41fb34fc29748455ebae31fba2d54",
+      "thumbChunkBytes": 20020
     },
     {
       "frameIndex": 2,
@@ -39,8 +39,8 @@
       "rawBytes": 4320000,
       "chunkBytes": 62529,
       "pngBytes": 53320,
-      "thumbRgbaSha256": "a9b573e269fb338444f6438f261961501ee4b2cac569512b064ec2f11b9aa035",
-      "thumbChunkBytes": 8895
+      "thumbRgbaSha256": "2393ac3cb65f4eb6c3888e46e4d22e1678b4520db92c1aee5dbd51135348a009",
+      "thumbChunkBytes": 24215
     }
   ],
   "totals": {
@@ -48,6 +48,6 @@
     "rawBytes": 12960000,
     "chunkBytes": 163245,
     "pngBytes": 133123,
-    "thumbChunkBytes": 21348
+    "thumbChunkBytes": 61298
   }
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Save docs/screenshot.png: the built player at 1200x900 CSS px, device scale 1.
 // Usage: node scripts/screenshot.mjs [stepId] [sessionId]
-// Env: VIEW=cube, CUT=0.42,0.52 (click position on the cube as a fraction), OUT=docs/screenshot.png, LANG=en
+// Env: VIEW=layers, OUT=docs/screenshot.png, SHOT_LANG=en
 import { createRequire } from 'node:module';
 import { serve } from './serve.mjs';
 
@@ -18,13 +18,9 @@ try {
   await page.goto(`${url}?${q}`);
   await page.waitForFunction(() => document.getElementById('stage')?.dataset.state !== 'loading');
   await page.evaluate(() => document.fonts.ready);
-  if (process.env.VIEW === 'cube') {
+  if (process.env.VIEW === 'layers') {
     await page.waitForSelector('#stage[data-thumbs=ready]');
-    if (process.env.CUT) {
-      const [fx, fy] = process.env.CUT.split(',').map(Number);
-      const box = await page.locator('canvas.cube').boundingBox();
-      await page.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
-    }
+    await page.waitForTimeout(800); // let the new layer settle
   }
   const out = process.env.OUT || 'docs/screenshot.png';
   await page.screenshot({ path: out });

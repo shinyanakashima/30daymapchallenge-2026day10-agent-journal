@@ -1,4 +1,4 @@
-import { CubeView } from './cube';
+import type { StackView } from './stack';
 import { FrameSource } from './frames';
 import { t } from './i18n';
 import { loadSession, type Lang, type Session, type Step } from './session';
@@ -25,8 +25,8 @@ const nextBtn = $<HTMLButtonElement>('next');
 const playBtn = $<HTMLButtonElement>('play');
 const langBtn = $<HTMLButtonElement>('lang');
 const viewScreenBtn = $<HTMLButtonElement>('view-screen');
-const viewCubeBtn = $<HTMLButtonElement>('view-cube');
-const cubeHint = $('cube-hint');
+const viewLayersBtn = $<HTMLButtonElement>('view-layers');
+const viewHint = $('view-hint');
 
 const params = new URLSearchParams(location.search);
 let lang: Lang = pickLang();
@@ -41,17 +41,17 @@ let settleTimer: number | undefined;
 let loadSeq = 0;
 let loadCtrl: AbortController | null = null;
 let stepEls: HTMLLIElement[] = [];
-type View = 'screen' | 'cube';
+type View = 'screen' | 'layers';
 let view: View = pickView();
-let cube: CubeView | null = null;
-let thumbsLoad: Promise<void> | null = null;
+let stack: StackView | null = null;
+let stackLoad: Promise<void> | null = null;
 
 function pickView(): View {
   const q = params.get('view');
-  if (q === 'screen' || q === 'cube') return q;
+  if (q === 'screen' || q === 'layers') return q;
   try {
     const s = localStorage.getItem('day10-view');
-    if (s === 'screen' || s === 'cube') return s;
+    if (s === 'screen' || s === 'layers') return s;
   } catch { /* storage unavailable */ }
   return 'screen';
 }
@@ -61,43 +61,50 @@ function setView(v: View) {
   try { localStorage.setItem('day10-view', v); } catch { /* ignore */ }
   stage.dataset.view = v;
   viewScreenBtn.setAttribute('aria-pressed', String(v === 'screen'));
-  viewCubeBtn.setAttribute('aria-pressed', String(v === 'cube'));
-  cubeHint.textContent = v === 'cube' ? t(lang).cubeHint : '';
-  if (v === 'cube') ensureCube();
-  refreshCube();
+  viewLayersBtn.setAttribute('aria-pressed', String(v === 'layers'));
+  viewHint.textContent = v === 'layers' ? t(lang).layersHint : '';
+  if (v === 'layers') {
+    void ensureStack().then(() => { stack?.start(); refreshStack(); });
+  } else stack?.stop();
 }
 
-function ensureCube() {
-  if (!session || cube) return;
+/** three.js and the thumbnails are loaded only when the layers view is first opened. */
+function ensureStack(): Promise<void> {
+  if (stackLoad) return stackLoad;
+  if (!session || !sessionUrl) return Promise.resolve();
   const s = session;
-  cube = new CubeView(
-    s.steps,
-    () => {
-      const L = t(lang);
-      return { earlier: L.cubeEarlier, noCapture: L.cubeNoCapture, failed: L.cubeFailed, loading: L.cubeLoading, step: L.step };
-    },
-    (i) => { setPlaying(false); select(i); },
-  );
-  stage.append(cube.canvas);
-  const th = s.thumbnails;
-  if (th?.path && th.count > 0 && !thumbsLoad) {
-    const [, h, w] = th.shape;
-    const src = new FrameSource(new URL(th.path, sessionUrl!), w, h, th.count);
-    stage.dataset.thumbs = 'loading';
-    thumbsLoad = src.getAll(th.count).then(
-      (all) => { stage.dataset.thumbs = 'ready'; cube!.setThumbs(all, w, h); },
-      (err) => {
-        console.error(err);
-        stage.dataset.thumbs = 'error';
-        cubeHint.textContent = t(lang).cubeThumbError;
-      },
-    );
-  }
+  stage.dataset.thumbs = 'loading';
+  stackLoad = (async () => {
+    try {
+      const { StackView } = await import('./stack');
+      stack = new StackView(
+        s.steps,
+        () => {
+          const L = t(lang);
+          return { step: L.step, failed: L.layersFailed, noCapture: L.noFrame, selectStep: (n: number) => `${L.step} ${n}` };
+        },
+        (i) => { setPlaying(false); select(i); },
+      );
+      stage.append(stack.element);
+      const th = s.thumbnails;
+      if (th?.path && th.count > 0) {
+        const [, h, w] = th.shape;
+        const src = new FrameSource(new URL(th.path, sessionUrl!), w, h, th.count);
+        const all = await src.getAll(th.count);
+        stack.setThumbs(all, w, h);
+      }
+      stage.dataset.thumbs = 'ready';
+    } catch (err) {
+      console.error(err);
+      stage.dataset.thumbs = 'error';
+      viewHint.textContent = t(lang).layersError;
+    }
+  })();
+  return stackLoad;
 }
 
-function refreshCube() {
-  if (view !== 'cube' || !cube || !session) return;
-  cube.setStep(current, canvas, stage.dataset.state ?? 'loading');
+function refreshStack() {
+  if (view === 'layers' && stack) stack.setStep(current);
 }
 
 function pickLang(): Lang {
@@ -128,7 +135,6 @@ function setStage(state: StageState, step: Step | null, text = '', retry = false
     b.addEventListener('click', () => showFrame(current));
     stageMsg.append(b);
   }
-  refreshCube();
 }
 
 function clearCanvas() {
@@ -148,6 +154,7 @@ function select(i: number, opts: { settle?: boolean } = {}) {
   current = next;
   renderControls();
   renderLog();
+  refreshStack();
   window.clearTimeout(settleTimer);
   if (opts.settle) {
     // While the timeline is being dragged, show the loading state right away
@@ -361,9 +368,9 @@ function renderStatic() {
   $('controls').setAttribute('aria-label', s.timeline);
   $('side-h').textContent = s.conversation;
   viewScreenBtn.textContent = s.viewScreen;
-  viewCubeBtn.textContent = s.viewCube;
+  viewLayersBtn.textContent = s.viewLayers;
   $('views').setAttribute('aria-label', s.viewLabel);
-  cubeHint.textContent = view === 'cube' ? s.cubeHint : '';
+  viewHint.textContent = view === 'layers' ? s.layersHint : '';
   if (!session) return;
   $('title').textContent = session.title[lang];
   const fixture = $('fixture');
@@ -422,13 +429,13 @@ function bind() {
     select(value, { settle: true });
   });
   viewScreenBtn.addEventListener('click', () => setView('screen'));
-  viewCubeBtn.addEventListener('click', () => setView('cube'));
+  viewLayersBtn.addEventListener('click', () => setView('layers'));
   langBtn.addEventListener('click', () => {
     lang = lang === 'en' ? 'ja' : 'en';
     try { localStorage.setItem('day10-lang', lang); } catch { /* ignore */ }
     renderStatic();
     if (session) showFrame(current);
-    refreshCube();
+    refreshStack();
   });
   document.addEventListener('keydown', (e) => {
     if (!session || e.altKey || e.ctrlKey || e.metaKey) return;
@@ -450,7 +457,7 @@ function bind() {
         if (onRange) return;
         e.preventDefault(); setPlaying(false); select(session.steps.length - 1); break;
       case 'c': case 'C':
-        e.preventDefault(); setView(view === 'cube' ? 'screen' : 'cube'); break;
+        e.preventDefault(); setView(view === 'layers' ? 'screen' : 'layers'); break;
       case ' ': case 'k':
         if (onButton) return;
         e.preventDefault(); setPlaying(!playing); break;

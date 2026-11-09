@@ -4,9 +4,9 @@ AIとの対話で地図が変わっていく過程を、工程ごとの画面・
 
 A player for an AI map-making session: the screen, prompt and response at each step, on a timeline that includes failed attempts.
 
-| 画面 | キューブ |
+| 画面 | 積層 |
 | --- | --- |
-| ![Screen view (UI fixture)](docs/screenshot.png) | ![Cube view (UI fixture)](docs/screenshot-cube.png) |
+| ![Screen view (UI fixture)](docs/screenshot.png) | ![Layers view (UI fixture)](docs/screenshot-layers.png) |
 
 ## 現在の状態
 
@@ -16,17 +16,17 @@ A player for an AI map-making session: the screen, prompt and response at each s
 
 ## 画面
 
-表示は「画面」と「キューブ」の2つです（右上で切り替え、`C` キー、`?view=cube`）。
+表示は「画面」と「積層」の2つです（右上で切り替え、`C` キー、`?view=layers`）。
 
-### キューブ
+### 積層
 
-工程ごとの画面を奥行き方向に積んだ「x × y × 工程」の箱として描きます。
+工程ごとの画面を水平な層として、工程1を一番下に積み上げます（Day 8「空き家」の国勢調査年の層と同じ見せ方）。
 
-- 手前の面が選択中の工程の画面です。それより前の工程が奥へ並び、再生すると箱が育ちます。
-- 上面と右側面には、各工程の画面を切り口の1行と1列で切った断面を、工程の順に並べます。地図をクリックすると、その位置で全工程を切ります。
-- 失敗した工程は赤、画像のない工程は灰色の層として表示します。他の工程の画像では埋めません。
-- ドラッグで回転し、上面・側面の層をクリックするとその工程へ移動します。ダブルクリックで切り口を戻します。
-- 断面は縮小配列 `thumbs.zarr`（300×225）から作ります。手前の面は、選択中の工程の高解像度画像（`frames.zarr` の1チャンク）です。
+- 各層では、前に撮影した工程から変わった画素を濃く、変わっていない画素を薄く描きます。どの工程で何が加わったか、何が変わったかが層ごとに見えます。選択中の工程の層は、変わっていない画素もやや濃くして地図全体が読めるようにしています。
+- 選択中の工程より後の層は、枠だけを薄く描きます。再生すると層が積み上がります。
+- 失敗した工程は赤い枠、画像のない工程は枠だけの層です。他の工程の画像では埋めません。
+- 右奥の目盛りに工程番号を並べ、クリックするとその工程を開きます。ドラッグで回転、スクロールで拡大縮小します。
+- 層の画像は縮小配列 `thumbs.zarr`（600×450）から作ります。three.js（0.186.1）と縮小配列は、積層表示を初めて開いたときにだけ読み込みます。
 
 ### 配置
 
@@ -74,7 +74,7 @@ A player for an AI map-making session: the screen, prompt and response at each s
 | `fixtures/<id>/build-report.json` | しない | フレームごとのRGBA SHA-256とサイズ（検証用） |
 | `public/sessions/<id>/session.json` | する | 題名、schemaVersion、viewport、steps、Zarrパス |
 | `public/sessions/<id>/frames.zarr/` | する | 画面画像の配列（1200×900） |
-| `public/sessions/<id>/thumbs.zarr/` | する | キューブ用の縮小配列（300×225、同じ次元構成） |
+| `public/sessions/<id>/thumbs.zarr/` | する | 積層表示用の縮小配列（600×450、同じ次元構成） |
 
 元のPNGとコードは再現用にリポジトリへ残し、公開バンドル（`dist/`）にはZarrとJSONだけを入れます。
 
@@ -104,9 +104,9 @@ A player for an AI map-making session: the screen, prompt and response at each s
 | codec | `bytes` → `gzip(level=6)` |
 | 読み込み | zarrita 0.7.5 の `FetchStore` で選択した工程のチャンクだけを取得・復号し、Canvasへ描画 |
 | 配信 | `session.json` と同じoriginの静的ディレクトリ（GitHub Pages） |
-| 縮小配列 | `thumbs.zarr`：shape `(N, 225, 300, 4)`、chunks `(1, 225, 300, 4)`、4×4画素の平均（box）で縮小 |
+| 縮小配列 | `thumbs.zarr`：shape `(N, 450, 600, 4)`、chunks `(1, 450, 600, 4)`、2×2画素の平均（box）で縮小 |
 
-役割：画面の並びを工程番号で索引し、1枚ずつ取り出すための入れ物です。キューブ表示では、同じ配列を工程の軸に沿って切り、断面として見せます。配列の次元（工程 × y × x）を、そのまま立体の3辺にしています。1工程を1チャンクにしているので、工程を移動しても全画像は取得しません。隣の1工程だけを先読みし、直近4枚をキャッシュします。操作が速いときは古いリクエストを中断し、遅れて届いた結果で画面を上書きしません。
+役割：画面の並びを工程番号で索引し、1枚ずつ取り出すための入れ物です。積層表示では、配列の工程の軸をそのまま高さにして、工程ごとの面（y × x）を積み上げています。1工程を1チャンクにしているので、工程を移動しても全画像は取得しません。隣の1工程だけを先読みし、直近4枚をキャッシュします。操作が速いときは古いリクエストを中断し、遅れて届いた結果で画面を上書きしません。
 
 限界：
 
@@ -114,7 +114,8 @@ A player for an AI map-making session: the screen, prompt and response at each s
 - 地図の写真やタイル（空間的に詳細な面）が多い画面では、gzipの圧縮率は下がる見込みです。必要になったら圧縮方式や sharding を測定の上で検討します。最初からは導入していません。
 - これは画面ピクセルの配列で、地理参照付きラスタではありません。CRSや座標は持たせていません。
 - 会話本文は `session.json` に保存し、Zarrには入れていません。
-- キューブの断面は縮小配列から作るため、細い線や文字は粗くなります。キューブを開くと縮小配列を全工程分取得します（fixtureでは3枚で計21,348 B）。工程が100を超える場合は、縮小配列を1チャンクにまとめるなど、取得方法を測って見直します。
+- 積層の層は縮小配列から作るため、細い線や文字は粗くなります。積層表示を開くと縮小配列を全工程分取得します（fixtureでは3枚で計61,298 B）。工程が100を超える場合は、取得方法を測って見直します。
+- 「変わった画素」は、前に撮影した画面とのRGBの差の合計が24を超えた画素です。地図を少し動かしただけでも画面全体が「変わった」と判定されるので、本番では工程ごとに地図の範囲を固定して撮るとよく見えます。
 - 欠けたチャンクを zarrita は既定で fill_value（透明な黒）として返すため、このアプリでは欠けたチャンクをエラーとして扱います。
 - 検証はChromium（Playwright同梱版）で行いました。gzip の復号はブラウザ標準の `DecompressionStream` を使います。他のブラウザでは未検証です。
 
@@ -143,7 +144,7 @@ python tools/build_session.py fixtures/ui-fixture public/sessions/ui-fixture
 npm run build
 npm run verify       # docs/verification.json を出力
 npm run screenshot   # docs/screenshot.png（1200×900、deviceScaleFactor=1）
-VIEW=cube CUT=0.42,0.52 OUT=docs/screenshot-cube.png npm run screenshot -- s04-legend
+VIEW=layers OUT=docs/screenshot-layers.png npm run screenshot -- s05-review
 ```
 
 ## 検証結果
@@ -156,14 +157,14 @@ VIEW=cube CUT=0.42,0.52 OUT=docs/screenshot-cube.png npm run screenshot -- s04-l
 - 初期ロードで取得するチャンクは選択工程と隣の1工程のみ。全工程を順に移動しても各チャンクは1回だけ取得。使わない圧縮方式（zstd、blosc、lz4）のコードは読み込まない。
 - 壊れたチャンク・欠けたチャンクは「読み込めませんでした」と再試行ボタンを表示。存在しない記録はエラー表示。
 - Home／End、Spaceでの再生と停止、日本語切り替え、モバイル幅（390px）で横スクロールなし・縦並び。
-- キューブ：`C` キーで切り替わる。縮小配列を各1回だけ取得し、高解像度の画像は追加で取得しない。縮小配列はブラウザで復号すると変換時のhashと一致する。層をクリックするとその工程が開き、地図のクリックで切り口が動き、ダブルクリックで戻る。ドラッグで回転しても工程は変わらない。
+- 積層：`C` キーで切り替わる。three.js は積層表示を開くまで読み込まない。縮小配列を各1回だけ取得し、高解像度の画像は追加で取得しない。縮小配列はブラウザで復号すると変換時のhashと一致する。目盛りのクリックでその工程が開き、それより後の層は枠だけになる。ドラッグで回転しても工程は変わらない。
 
 ## ファイル構成
 
 ```
 src/                 再生UI（Vite + TypeScript、React不使用）
   frames.ts          Zarr読み込み、キャッシュ、先読み、中断
-  cube.ts            キューブ表示（Canvas 2D、外部ライブラリなし）
+  stack.ts           積層表示（three.js、OrbitControls、CSS2DRenderer）
   session.ts         session.json の型と検証
 tools/
   capture.mjs        1200×900、DPR 1 の撮影

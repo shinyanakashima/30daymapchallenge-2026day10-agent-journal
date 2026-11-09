@@ -78,10 +78,10 @@ try {
     const info = await stageInfo(page);
     await page.waitForTimeout(400); // allow the adjacent prefetch to start
     const chunks = [...new Set(requests.filter(isChunk).map(chunkIndex))];
-    const codecChunks = requests.filter((u) => /\/assets\/(zstd|blosc|lz4)-/.test(u));
+    const codecChunks = requests.filter((u) => /\/assets\/(zstd|blosc|lz4|stack)-/.test(u));
     check('initial load shows first step', info.state === expectedState(steps[0]) && info.stepId === steps[0].stepId, info);
     check('initial load fetches only first frame and one neighbour', chunks.length <= 2 && chunks.includes(steps[0].frameIndex ?? 0), { chunks });
-    check('unused codecs are not downloaded', codecChunks.length === 0, { codecChunks });
+    check('unused codecs and the layers view code are not downloaded', codecChunks.length === 0, { codecChunks });
     check('no page errors on load', errors.length === 0, { errors });
     await context.close();
   }
@@ -254,29 +254,32 @@ try {
     await context.close();
   }
 
-  // 10. Cube view
+  // 10. Layers view (three.js, loaded on demand)
   {
     const { context, page, requests, errors } = await newPage();
     const last = steps.length - 1;
     await page.goto(`${base}?step=${encodeURIComponent(steps[last].stepId)}`);
     await settled(page);
+    const stackBefore = requests.filter((u) => /\/assets\/stack-/.test(u)).length;
     const fullBefore = requests.filter(isChunk).length;
     await page.locator('body').click({ position: { x: 5, y: 5 } });
     await page.keyboard.press('c');
-    await page.waitForSelector('#stage[data-thumbs=ready]', { timeout: 15000 });
+    await page.waitForSelector('#stage[data-thumbs=ready]', { timeout: 20000 });
+    await page.waitForTimeout(600);
     const thumbReqs = [...new Set(requests.filter((u) => /\/thumbs\.zarr\/c\//.test(u)))];
+    const stackAfter = requests.filter((u) => /\/assets\/stack-/.test(u)).length;
     const fullAfter = requests.filter(isChunk).length;
-    const cubeInfo = await page.evaluate(() => {
-      const c = document.querySelector('canvas.cube');
-      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
-      let painted = 0;
-      for (let i = 3; i < d.length; i += 4 * 16) if (d[i] > 0) painted++;
-      return { layers: Number(c.dataset.layers), visible: getComputedStyle(c).display !== 'none', painted, view: document.getElementById('stage').dataset.view };
+    const captured = (upTo) => steps.slice(0, upTo + 1).filter((s) => s.frameIndex !== null).length;
+    const info = await page.evaluate(() => {
+      const el = document.querySelector('.stack');
+      const gl = el.querySelector('canvas');
+      const labels = [...el.querySelectorAll('.sl')].map((b) => ({ text: b.textContent, sel: b.classList.contains('sel'), future: b.classList.contains('future') }));
+      return { view: document.getElementById('stage').dataset.view, layers: Number(el.dataset.layers), visible: getComputedStyle(el).display !== 'none', w: gl.width, labels };
     });
-    check('cube view: C key switches, all thumbnails loaded once, no extra full frames', cubeInfo.view === 'cube' && cubeInfo.visible && thumbReqs.length === report.frames.length && fullAfter === fullBefore, { thumbChunkRequests: thumbReqs.length, fullFrameRequestsAdded: fullAfter - fullBefore });
-    check('cube view: one layer per step up to the selected step, drawn', cubeInfo.layers === steps.length && cubeInfo.painted > 1000, cubeInfo);
+    check('layers view: three.js is loaded only when the view opens', stackBefore === 0 && stackAfter >= 1, { stackBefore, stackAfter });
+    check('layers view: thumbnails fetched once each, no extra full frames', info.view === 'layers' && info.visible && thumbReqs.length === report.frames.length && fullAfter === fullBefore, { thumbChunkRequests: thumbReqs.length, fullFrameRequestsAdded: fullAfter - fullBefore });
+    check('layers view: one label per step, captured layers up to the selected step', info.labels.length === steps.length && info.layers === captured(last) && info.labels[last].sel, { layers: info.layers, labels: info.labels.length });
 
-    // Thumbnails decode in the browser to the hashes written by the converter.
     const thumbOk = await page.evaluate(async ({ id, n }) => {
       const res = [];
       for (let i = 0; i < n; i++) {
@@ -287,42 +290,33 @@ try {
       }
       return res;
     }, { id: sessionId, n: report.frames.length });
-    check('cube thumbnails decode to the converter hashes', thumbOk.every((h, i) => h === report.frames[i].thumbRgbaSha256), { frames: thumbOk.length });
+    check('layer thumbnails decode to the converter hashes', thumbOk.every((h, i) => h === report.frames[i].thumbRgbaSha256), { frames: thumbOk.length });
 
-    // Click a layer on the top face -> that step is selected.
-    const targetLayer = Math.min(2, last);
-    const pt = await page.evaluate((k) => {
-      const c = document.querySelector('canvas.cube');
-      const p = c.topFacePoint(k);
-      const r = c.getBoundingClientRect();
-      return { x: r.left + (p.x / 1200) * r.width, y: r.top + (p.y / 900) * r.height };
-    }, targetLayer);
-    await page.mouse.click(pt.x, pt.y);
+    // Clicking a step label opens that step; later layers become empty frames.
+    const target = 1;
+    await page.locator('.stack .sl').nth(target).click();
     await settled(page);
-    const afterLayer = await stageInfo(page);
-    check('cube: clicking a layer opens that step', afterLayer.scrub === last - targetLayer && afterLayer.stepId === steps[last - targetLayer].stepId, { selected: afterLayer.stepId });
+    const afterLabel = await stageInfo(page);
+    const after = await page.evaluate(() => {
+      const el = document.querySelector('.stack');
+      return { layers: Number(el.dataset.layers), future: [...el.querySelectorAll('.sl')].map((b) => b.classList.contains('future')) };
+    });
+    check('layers: clicking a step label opens that step', afterLabel.scrub === target && afterLabel.stepId === steps[target].stepId && after.layers === captured(target) && after.future.every((f, i) => f === i > target), { selected: afterLabel.stepId, layers: after.layers });
 
-    // Click on the front face -> the cut moves; double-click resets.
-    const box = await page.locator('canvas.cube').boundingBox();
-    const cutBefore = await page.getAttribute('canvas.cube', 'data-cut');
-    await page.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.6);
-    const cutAfter = await page.getAttribute('canvas.cube', 'data-cut');
-    await page.mouse.dblclick(box.x + box.width * 0.2, box.y + box.height * 0.7);
-    const cutReset = await page.getAttribute('canvas.cube', 'data-cut');
-    check('cube: clicking the map sets a cut; double-click resets it', cutBefore === '1200,0' && cutAfter !== cutBefore && cutReset === '1200,0', { cutBefore, cutAfter, cutReset });
-
-    // Drag rotates without changing the step.
-    const stepBeforeDrag = (await stageInfo(page)).stepId;
-    const shotBefore = await page.locator('canvas.cube').screenshot();
-    await page.mouse.move(box.x + box.width * 0.9, box.y + box.height * 0.2);
+    // Drag turns the view and keeps the step.
+    await page.waitForTimeout(500);
+    const gl = page.locator('.stack canvas');
+    const box = await gl.boundingBox();
+    const before = await gl.screenshot();
+    await page.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.8);
     await page.mouse.down();
-    await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.3, { steps: 8 });
+    await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.75, { steps: 10 });
     await page.mouse.up();
-    const shotAfter = await page.locator('canvas.cube').screenshot();
+    await page.waitForTimeout(700);
+    const afterShot = await gl.screenshot();
     const stepAfterDrag = (await stageInfo(page)).stepId;
-    check('cube: drag rotates and keeps the step', !shotBefore.equals(shotAfter) && stepBeforeDrag === stepAfterDrag, { step: stepAfterDrag });
-    check('cube: no page errors', errors.length === 0, { errors });
-    if (shotDir) await page.screenshot({ path: `${shotDir}/cube-verify.png` });
+    check('layers: drag turns the view and keeps the step', !before.equals(afterShot) && stepAfterDrag === steps[target].stepId, { step: stepAfterDrag });
+    check('layers: no page errors', errors.length === 0, { errors });
     await context.close();
   }
 

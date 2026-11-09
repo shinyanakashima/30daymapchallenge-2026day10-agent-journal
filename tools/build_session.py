@@ -9,7 +9,7 @@ message files (contentFile). <out-dir> receives the publishable bundle:
 
     <out-dir>/session.json
     <out-dir>/frames.zarr/        Zarr v3, uint8, (step, y, x, channel), RGBA, 1200x900
-    <out-dir>/thumbs.zarr/        same layout at 300x225, used by the cube view
+    <out-dir>/thumbs.zarr/        same layout at 600x450, used by the layers view
 
 A build report with per-frame RGBA SHA-256 hashes and byte sizes is written to
 <source-dir>/build-report.json. It is used for verification and is not published.
@@ -35,7 +35,7 @@ from zarr.codecs import BytesCodec, GzipCodec
 
 SCHEMA_VERSION = 1
 WIDTH, HEIGHT, CHANNELS = 1200, 900, 4
-THUMB_W, THUMB_H = 300, 225
+THUMB_W, THUMB_H = 600, 450
 GZIP_LEVEL = 6
 STATUSES = {"success", "error"}
 ROLES = {"user", "assistant", "tool", "note"}
@@ -194,7 +194,7 @@ def main() -> None:
     arr = None
     if n:
         arr = create_frames_array(zarr_path, n, HEIGHT, WIDTH, "Screen pixels, not a georeferenced raster.")
-        thumbs = create_frames_array(thumb_path, n, THUMB_H, THUMB_W, "Box-downsampled copy of frames.zarr for the cube view.")
+        thumbs = create_frames_array(thumb_path, n, THUMB_H, THUMB_W, "Box-downsampled copy of frames.zarr for the layers view.")
         for idx, (sid, path) in enumerate(captures):
             rgba = load_rgba(path)
             arr[idx] = rgba
