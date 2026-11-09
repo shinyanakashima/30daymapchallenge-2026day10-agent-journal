@@ -12,7 +12,9 @@
       "rgbaSha256": "094c10f044676f750db7ad3b7fca36b304e10c11f9b2238e9a913ea50ddc7a1f",
       "rawBytes": 4320000,
       "chunkBytes": 46425,
-      "pngBytes": 35705
+      "pngBytes": 35705,
+      "thumbRgbaSha256": "74a423846f9ab202374845a8f62f87ea94645865e4100a28498cbd99bba503b0",
+      "thumbChunkBytes": 5693
     },
     {
       "frameIndex": 1,
@@ -23,7 +25,9 @@
       "rgbaSha256": "d2e3dcd59010eb7daf328b4f7619cbc8a1957d349b2f04077c9d94c3300ccb18",
       "rawBytes": 4320000,
       "chunkBytes": 54291,
-      "pngBytes": 44098
+      "pngBytes": 44098,
+      "thumbRgbaSha256": "50af0c0d1d10e82faa14162eb513ef44d1d01e68ec9540bbe27b1f60772ee659",
+      "thumbChunkBytes": 6760
     },
     {
       "frameIndex": 2,
@@ -34,13 +38,16 @@
       "rgbaSha256": "fdd9cc110770fa01e10dcd285cb90f4a99d95fafa28bbceaf5156981835676b7",
       "rawBytes": 4320000,
       "chunkBytes": 62529,
-      "pngBytes": 53320
+      "pngBytes": 53320,
+      "thumbRgbaSha256": "a9b573e269fb338444f6438f261961501ee4b2cac569512b064ec2f11b9aa035",
+      "thumbChunkBytes": 8895
     }
   ],
   "totals": {
     "frames": 3,
     "rawBytes": 12960000,
     "chunkBytes": 163245,
-    "pngBytes": 133123
+    "pngBytes": 133123,
+    "thumbChunkBytes": 21348
   }
 }

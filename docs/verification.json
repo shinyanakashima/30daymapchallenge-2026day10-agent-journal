@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-11-06T11:59:54.547Z",
+  "checkedAt": "2026-11-09T03:43:41.186Z",
   "session": "ui-fixture",
   "sessionKind": "fixture",
   "browser": "chromium 153.0.8010.12",
@@ -9,9 +9,10 @@
     "frames": 3,
     "rawBytes": 12960000,
     "chunkBytes": 163245,
-    "pngBytes": 133123
+    "pngBytes": 133123,
+    "thumbChunkBytes": 21348
   },
-  "passed": 24,
+  "passed": 31,
   "failed": 0,
   "results": [
     {
@@ -175,12 +176,53 @@
       "name": "mobile: image, conversation, timeline stacked without horizontal scroll",
       "ok": true,
       "overflowX": 0,
-      "stageY": 160,
-      "sideY": 450.5,
+      "stageY": 161,
+      "sideY": 451.5,
       "controlsY": 562.5,
       "controlsBottom": 0,
       "stageW": 358,
       "vw": 390
+    },
+    {
+      "name": "cube view: C key switches, all thumbnails loaded once, no extra full frames",
+      "ok": true,
+      "thumbChunkRequests": 3,
+      "fullFrameRequestsAdded": 0
+    },
+    {
+      "name": "cube view: one layer per step up to the selected step, drawn",
+      "ok": true,
+      "layers": 5,
+      "visible": true,
+      "painted": 49222,
+      "view": "cube"
+    },
+    {
+      "name": "cube thumbnails decode to the converter hashes",
+      "ok": true,
+      "frames": 3
+    },
+    {
+      "name": "cube: clicking a layer opens that step",
+      "ok": true,
+      "selected": "s03-build-failed"
+    },
+    {
+      "name": "cube: clicking the map sets a cut; double-click resets it",
+      "ok": true,
+      "cutBefore": "1200,0",
+      "cutAfter": "460,446",
+      "cutReset": "1200,0"
+    },
+    {
+      "name": "cube: drag rotates and keeps the step",
+      "ok": true,
+      "step": "s03-build-failed"
+    },
+    {
+      "name": "cube: no page errors",
+      "ok": true,
+      "errors": []
     }
   ]
 }

@@ -36,6 +36,11 @@ export type Session = {
     dtype: 'uint8';
     channels: 'RGBA';
   };
+  thumbnails?: {
+    path: string | null;
+    count: number;
+    shape: [number, number, number, number];
+  };
   steps: Step[];
 };
 

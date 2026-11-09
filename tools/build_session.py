@@ -8,7 +8,8 @@ Usage:
 message files (contentFile). <out-dir> receives the publishable bundle:
 
     <out-dir>/session.json
-    <out-dir>/frames.zarr/        Zarr v3, uint8, (step, y, x, channel), RGBA
+    <out-dir>/frames.zarr/        Zarr v3, uint8, (step, y, x, channel), RGBA, 1200x900
+    <out-dir>/thumbs.zarr/        same layout at 300x225, used by the cube view
 
 A build report with per-frame RGBA SHA-256 hashes and byte sizes is written to
 <source-dir>/build-report.json. It is used for verification and is not published.
@@ -34,6 +35,7 @@ from zarr.codecs import BytesCodec, GzipCodec
 
 SCHEMA_VERSION = 1
 WIDTH, HEIGHT, CHANNELS = 1200, 900, 4
+THUMB_W, THUMB_H = 300, 225
 GZIP_LEVEL = 6
 STATUSES = {"success", "error"}
 ROLES = {"user", "assistant", "tool", "note"}
@@ -81,6 +83,27 @@ def load_rgba(path: Path) -> np.ndarray:
         rgba = np.asarray(im.convert("RGBA"), dtype=np.uint8)
     assert rgba.shape == (HEIGHT, WIDTH, CHANNELS)
     return np.ascontiguousarray(rgba)
+
+
+def create_frames_array(path: Path, n: int, height: int, width: int, note: str):
+    return zarr.create_array(
+        store=str(path),
+        shape=(n, height, width, CHANNELS),
+        chunks=(1, height, width, CHANNELS),
+        dtype="uint8",
+        fill_value=0,
+        serializer=BytesCodec(),
+        compressors=GzipCodec(level=GZIP_LEVEL),
+        dimension_names=("step", "y", "x", "channel"),
+        attributes={"channels": "RGBA", "note": note},
+        zarr_format=3,
+        config={"write_empty_chunks": True},
+    )
+
+
+def thumbnail(rgba: np.ndarray) -> np.ndarray:
+    im = Image.fromarray(rgba, mode="RGBA").resize((THUMB_W, THUMB_H), Image.Resampling.BOX)
+    return np.ascontiguousarray(np.asarray(im, dtype=np.uint8))
 
 
 def main() -> None:
@@ -161,29 +184,22 @@ def main() -> None:
     out_dir: Path = args.out
     out_dir.mkdir(parents=True, exist_ok=True)
     zarr_path = out_dir / "frames.zarr"
-    if zarr_path.exists():
-        shutil.rmtree(zarr_path)
+    thumb_path = out_dir / "thumbs.zarr"
+    for p in (zarr_path, thumb_path):
+        if p.exists():
+            shutil.rmtree(p)
 
     n = len(captures)
     report_frames = []
     arr = None
     if n:
-        arr = zarr.create_array(
-            store=str(zarr_path),
-            shape=(n, HEIGHT, WIDTH, CHANNELS),
-            chunks=(1, HEIGHT, WIDTH, CHANNELS),
-            dtype="uint8",
-            fill_value=0,
-            serializer=BytesCodec(),
-            compressors=GzipCodec(level=GZIP_LEVEL),
-            dimension_names=("step", "y", "x", "channel"),
-            attributes={"channels": "RGBA", "note": "Screen pixels, not a georeferenced raster."},
-            zarr_format=3,
-            config={"write_empty_chunks": True},
-        )
+        arr = create_frames_array(zarr_path, n, HEIGHT, WIDTH, "Screen pixels, not a georeferenced raster.")
+        thumbs = create_frames_array(thumb_path, n, THUMB_H, THUMB_W, "Box-downsampled copy of frames.zarr for the cube view.")
         for idx, (sid, path) in enumerate(captures):
             rgba = load_rgba(path)
             arr[idx] = rgba
+            th = thumbnail(rgba)
+            thumbs[idx] = th
             raw = rgba.tobytes()
             chunk_file = zarr_path / "c" / str(idx) / "0" / "0" / "0"
             report_frames.append({
@@ -196,6 +212,8 @@ def main() -> None:
                 "rawBytes": len(raw),
                 "chunkBytes": chunk_file.stat().st_size,
                 "pngBytes": path.stat().st_size,
+                "thumbRgbaSha256": hashlib.sha256(th.tobytes()).hexdigest(),
+                "thumbChunkBytes": (thumb_path / "c" / str(idx) / "0" / "0" / "0").stat().st_size,
             })
 
         # Read back with zarr-python and compare hashes before anything is published.
@@ -209,6 +227,11 @@ def main() -> None:
             chunk = (zarr_path / "c" / str(fr["frameIndex"]) / "0" / "0" / "0").read_bytes()
             if hashlib.sha256(gzip.decompress(chunk)).hexdigest() != fr["rgbaSha256"]:
                 fail(f"gzip chunk mismatch at frame {fr['frameIndex']}")
+        tback = zarr.open_array(str(thumb_path), mode="r")
+        for fr in report_frames:
+            got = hashlib.sha256(np.ascontiguousarray(tback[fr["frameIndex"]]).tobytes()).hexdigest()
+            if got != fr["thumbRgbaSha256"]:
+                fail(f"thumbnail read-back mismatch at frame {fr['frameIndex']}")
 
     session = {
         "schemaVersion": SCHEMA_VERSION,
@@ -229,6 +252,15 @@ def main() -> None:
             "chunks": [1, HEIGHT, WIDTH, CHANNELS],
             "codecs": ["bytes", f"gzip(level={GZIP_LEVEL})"],
         },
+        "thumbnails": {
+            "path": "thumbs.zarr" if n else None,
+            "count": n,
+            "shape": [n, THUMB_H, THUMB_W, CHANNELS],
+            "dtype": "uint8",
+            "channels": "RGBA",
+            "chunks": [1, THUMB_H, THUMB_W, CHANNELS],
+            "resampling": "box",
+        },
         "steps": steps_out,
     }
     (out_dir / "session.json").write_text(json.dumps(session, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -238,6 +270,7 @@ def main() -> None:
         "rawBytes": sum(f["rawBytes"] for f in report_frames),
         "chunkBytes": sum(f["chunkBytes"] for f in report_frames),
         "pngBytes": sum(f["pngBytes"] for f in report_frames),
+        "thumbChunkBytes": sum(f["thumbChunkBytes"] for f in report_frames),
     }
     report = {
         "sessionId": session["id"],

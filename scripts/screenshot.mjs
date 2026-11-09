@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Save docs/screenshot.png: the built player at 1200x900 CSS px, device scale 1.
 // Usage: node scripts/screenshot.mjs [stepId] [sessionId]
+// Env: VIEW=cube, CUT=0.42,0.52 (click position on the cube as a fraction), OUT=docs/screenshot.png, LANG=en
 import { createRequire } from 'node:module';
 import { serve } from './serve.mjs';
 
@@ -11,14 +12,23 @@ const { server, url } = await serve('dist');
 const browser = await chromium.launch();
 try {
   const page = await browser.newPage({ viewport: { width: 1200, height: 900 }, deviceScaleFactor: 1, colorScheme: 'light' });
-  const q = new URLSearchParams({ lang: 'en' });
+  const q = new URLSearchParams({ lang: process.env.SHOT_LANG || 'en', view: process.env.VIEW || 'screen' });
   if (stepId) q.set('step', stepId);
   if (sessionId) q.set('session', sessionId);
   await page.goto(`${url}?${q}`);
   await page.waitForFunction(() => document.getElementById('stage')?.dataset.state !== 'loading');
   await page.evaluate(() => document.fonts.ready);
-  await page.screenshot({ path: 'docs/screenshot.png' });
-  console.log('saved docs/screenshot.png');
+  if (process.env.VIEW === 'cube') {
+    await page.waitForSelector('#stage[data-thumbs=ready]');
+    if (process.env.CUT) {
+      const [fx, fy] = process.env.CUT.split(',').map(Number);
+      const box = await page.locator('canvas.cube').boundingBox();
+      await page.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
+    }
+  }
+  const out = process.env.OUT || 'docs/screenshot.png';
+  await page.screenshot({ path: out });
+  console.log(`saved ${out}`);
 } finally {
   await browser.close();
   server.close();

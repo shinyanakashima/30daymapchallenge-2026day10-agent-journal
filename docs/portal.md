@@ -5,14 +5,14 @@
 ## 日本語
 
 - 題名：Map Rewind
-- 説明：AIとの対話で地図を作り、工程ごとの画面とプロンプト・応答をタイムラインで再生する。失敗した工程も含めて振り返れる。画面はZarr配列に1工程1チャンクで保存している。
+- 説明：AIとの対話で地図を作り、工程ごとの画面とプロンプト・応答をタイムラインで再生する。失敗した工程も含めて振り返れる。画面はZarr配列に保存し、工程を奥行きにしたキューブとして切って見ることもできる。
 - 画像の代替テキスト：Map Rewindの画面
 - タグ：Zarr、TypeScript、AI
 
 ## English
 
 - Title: Map Rewind
-- Description: A map made by talking to an AI, replayed step by step with the screen, prompt and response at each step, failed attempts included. Screens are stored in a Zarr array, one chunk per step.
+- Description: A map made by talking to an AI, replayed step by step with the screen, prompt and response at each step, failed attempts included. Screens are stored in a Zarr array and can also be sliced as a cube, with the steps as its depth.
 - Thumbnail alt: Screenshot of Map Rewind
 - Tags: Zarr, TypeScript, AI
 
@@ -22,7 +22,7 @@
 {
   "id": "map-rewind",
   "title": "Map Rewind",
-  "description": "AIとの対話で地図を作り、工程ごとの画面とプロンプト・応答をタイムラインで再生する。失敗した工程も含めて振り返れる。画面はZarr配列に1工程1チャンクで保存している。",
+  "description": "AIとの対話で地図を作り、工程ごとの画面とプロンプト・応答をタイムラインで再生する。失敗した工程も含めて振り返れる。画面はZarr配列に保存し、工程を奥行きにしたキューブとして切って見ることもできる。",
   "status": "building",
   "thumbnail": "images/2026/works/map-rewind.jpg",
   "thumbnailAlt": "Map Rewindの画面",
@@ -35,11 +35,11 @@
   "updatedAt": "2026-11-06",
   "en": {
     "title": "Map Rewind",
-    "description": "A map made by talking to an AI, replayed step by step with the screen, prompt and response at each step, failed attempts included. Screens are stored in a Zarr array, one chunk per step.",
+    "description": "A map made by talking to an AI, replayed step by step with the screen, prompt and response at each step, failed attempts included. Screens are stored in a Zarr array and can also be sliced as a cube, with the steps as its depth.",
     "tags": ["Zarr", "TypeScript", "AI"],
     "thumbnailAlt": "Screenshot of Map Rewind"
   }
 }
 ```
 
-サムネイルは `docs/screenshot.png` を本番の記録で撮り直してから作ります。現在の `docs/screenshot.png` は UI確認用fixture の画面です。
+サムネイルは本番の記録で `docs/screenshot-cube.png`（キューブ表示）を撮り直してから作る案です。現在の画面画像は UI確認用fixture のものです。

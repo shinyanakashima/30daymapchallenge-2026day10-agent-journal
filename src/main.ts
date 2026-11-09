@@ -1,3 +1,4 @@
+import { CubeView } from './cube';
 import { FrameSource } from './frames';
 import { t } from './i18n';
 import { loadSession, type Lang, type Session, type Step } from './session';
@@ -23,10 +24,14 @@ const prevBtn = $<HTMLButtonElement>('prev');
 const nextBtn = $<HTMLButtonElement>('next');
 const playBtn = $<HTMLButtonElement>('play');
 const langBtn = $<HTMLButtonElement>('lang');
+const viewScreenBtn = $<HTMLButtonElement>('view-screen');
+const viewCubeBtn = $<HTMLButtonElement>('view-cube');
+const cubeHint = $('cube-hint');
 
 const params = new URLSearchParams(location.search);
 let lang: Lang = pickLang();
 let session: Session | null = null;
+let sessionUrl: URL | null = null;
 let frames: FrameSource | null = null;
 let current = 0;
 let lastDirection = 1;
@@ -36,6 +41,64 @@ let settleTimer: number | undefined;
 let loadSeq = 0;
 let loadCtrl: AbortController | null = null;
 let stepEls: HTMLLIElement[] = [];
+type View = 'screen' | 'cube';
+let view: View = pickView();
+let cube: CubeView | null = null;
+let thumbsLoad: Promise<void> | null = null;
+
+function pickView(): View {
+  const q = params.get('view');
+  if (q === 'screen' || q === 'cube') return q;
+  try {
+    const s = localStorage.getItem('day10-view');
+    if (s === 'screen' || s === 'cube') return s;
+  } catch { /* storage unavailable */ }
+  return 'screen';
+}
+
+function setView(v: View) {
+  view = v;
+  try { localStorage.setItem('day10-view', v); } catch { /* ignore */ }
+  stage.dataset.view = v;
+  viewScreenBtn.setAttribute('aria-pressed', String(v === 'screen'));
+  viewCubeBtn.setAttribute('aria-pressed', String(v === 'cube'));
+  cubeHint.textContent = v === 'cube' ? t(lang).cubeHint : '';
+  if (v === 'cube') ensureCube();
+  refreshCube();
+}
+
+function ensureCube() {
+  if (!session || cube) return;
+  const s = session;
+  cube = new CubeView(
+    s.steps,
+    () => {
+      const L = t(lang);
+      return { earlier: L.cubeEarlier, noCapture: L.cubeNoCapture, failed: L.cubeFailed, loading: L.cubeLoading, step: L.step };
+    },
+    (i) => { setPlaying(false); select(i); },
+  );
+  stage.append(cube.canvas);
+  const th = s.thumbnails;
+  if (th?.path && th.count > 0 && !thumbsLoad) {
+    const [, h, w] = th.shape;
+    const src = new FrameSource(new URL(th.path, sessionUrl!), w, h, th.count);
+    stage.dataset.thumbs = 'loading';
+    thumbsLoad = src.getAll(th.count).then(
+      (all) => { stage.dataset.thumbs = 'ready'; cube!.setThumbs(all, w, h); },
+      (err) => {
+        console.error(err);
+        stage.dataset.thumbs = 'error';
+        cubeHint.textContent = t(lang).cubeThumbError;
+      },
+    );
+  }
+}
+
+function refreshCube() {
+  if (view !== 'cube' || !cube || !session) return;
+  cube.setStep(current, canvas, stage.dataset.state ?? 'loading');
+}
 
 function pickLang(): Lang {
   const q = params.get('lang');
@@ -65,6 +128,7 @@ function setStage(state: StageState, step: Step | null, text = '', retry = false
     b.addEventListener('click', () => showFrame(current));
     stageMsg.append(b);
   }
+  refreshCube();
 }
 
 function clearCanvas() {
@@ -296,6 +360,10 @@ function renderStatic() {
   scrub.setAttribute('aria-label', s.timeline);
   $('controls').setAttribute('aria-label', s.timeline);
   $('side-h').textContent = s.conversation;
+  viewScreenBtn.textContent = s.viewScreen;
+  viewCubeBtn.textContent = s.viewCube;
+  $('views').setAttribute('aria-label', s.viewLabel);
+  cubeHint.textContent = view === 'cube' ? s.cubeHint : '';
   if (!session) return;
   $('title').textContent = session.title[lang];
   const fixture = $('fixture');
@@ -353,11 +421,14 @@ function bind() {
     setPlaying(false);
     select(value, { settle: true });
   });
+  viewScreenBtn.addEventListener('click', () => setView('screen'));
+  viewCubeBtn.addEventListener('click', () => setView('cube'));
   langBtn.addEventListener('click', () => {
     lang = lang === 'en' ? 'ja' : 'en';
     try { localStorage.setItem('day10-lang', lang); } catch { /* ignore */ }
     renderStatic();
     if (session) showFrame(current);
+    refreshCube();
   });
   document.addEventListener('keydown', (e) => {
     if (!session || e.altKey || e.ctrlKey || e.metaKey) return;
@@ -378,6 +449,8 @@ function bind() {
       case 'End':
         if (onRange) return;
         e.preventDefault(); setPlaying(false); select(session.steps.length - 1); break;
+      case 'c': case 'C':
+        e.preventDefault(); setView(view === 'cube' ? 'screen' : 'cube'); break;
       case ' ': case 'k':
         if (onButton) return;
         e.preventDefault(); setPlaying(!playing); break;
@@ -393,6 +466,7 @@ async function init() {
   try {
     const { session: s, url } = await loadSession(base, params.get('session'));
     session = s;
+    sessionUrl = url;
     if (s.frames.path && s.frames.count > 0) {
       frames = new FrameSource(new URL(s.frames.path, url), s.viewport.width, s.viewport.height);
     }
@@ -401,6 +475,7 @@ async function init() {
     const startId = params.get('step');
     const start = startId ? s.steps.findIndex((st) => st.stepId === startId) : 0;
     select(Math.max(0, start));
+    setView(view);
   } catch (err) {
     console.error(err);
     app.dataset.state = 'error';

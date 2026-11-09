@@ -54,6 +54,25 @@
       "gzip(level=6)"
     ]
   },
+  "thumbnails": {
+    "path": "thumbs.zarr",
+    "count": 3,
+    "shape": [
+      3,
+      225,
+      300,
+      4
+    ],
+    "dtype": "uint8",
+    "channels": "RGBA",
+    "chunks": [
+      1,
+      225,
+      300,
+      4
+    ],
+    "resampling": "box"
+  },
   "steps": [
     {
       "stepId": "s01-outline",

@@ -12,6 +12,7 @@ export class FrameSource {
   private inflight = new Map<number, { promise: Promise<Uint8Array>; controller: AbortController; users: number }>();
 
   constructor(url: URL, readonly width: number, readonly height: number, private capacity = 4) {
+    this.capacity = Math.max(1, capacity);
     const fetchStore = new zarr.FetchStore(url.href);
     // zarrita treats a missing chunk (404) as fill_value. Every frame is written,
     // so a missing chunk here is an error, not a blank frame.
@@ -34,6 +35,11 @@ export class FrameSource {
 
   has(index: number): boolean {
     return this.cache.has(index);
+  }
+
+  /** Fetch every frame (used for the small thumbnail array only). */
+  async getAll(count: number): Promise<Uint8Array[]> {
+    return Promise.all(Array.from({ length: count }, (_, i) => this.get(i)));
   }
 
   /** Resolve RGBA bytes for one frame. Aborting `signal` releases this caller's interest. */

@@ -254,6 +254,78 @@ try {
     await context.close();
   }
 
+  // 10. Cube view
+  {
+    const { context, page, requests, errors } = await newPage();
+    const last = steps.length - 1;
+    await page.goto(`${base}?step=${encodeURIComponent(steps[last].stepId)}`);
+    await settled(page);
+    const fullBefore = requests.filter(isChunk).length;
+    await page.locator('body').click({ position: { x: 5, y: 5 } });
+    await page.keyboard.press('c');
+    await page.waitForSelector('#stage[data-thumbs=ready]', { timeout: 15000 });
+    const thumbReqs = [...new Set(requests.filter((u) => /\/thumbs\.zarr\/c\//.test(u)))];
+    const fullAfter = requests.filter(isChunk).length;
+    const cubeInfo = await page.evaluate(() => {
+      const c = document.querySelector('canvas.cube');
+      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      let painted = 0;
+      for (let i = 3; i < d.length; i += 4 * 16) if (d[i] > 0) painted++;
+      return { layers: Number(c.dataset.layers), visible: getComputedStyle(c).display !== 'none', painted, view: document.getElementById('stage').dataset.view };
+    });
+    check('cube view: C key switches, all thumbnails loaded once, no extra full frames', cubeInfo.view === 'cube' && cubeInfo.visible && thumbReqs.length === report.frames.length && fullAfter === fullBefore, { thumbChunkRequests: thumbReqs.length, fullFrameRequestsAdded: fullAfter - fullBefore });
+    check('cube view: one layer per step up to the selected step, drawn', cubeInfo.layers === steps.length && cubeInfo.painted > 1000, cubeInfo);
+
+    // Thumbnails decode in the browser to the hashes written by the converter.
+    const thumbOk = await page.evaluate(async ({ id, n }) => {
+      const res = [];
+      for (let i = 0; i < n; i++) {
+        const r = await fetch(`sessions/${id}/thumbs.zarr/c/${i}/0/0/0`);
+        const raw = await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+        const h = await crypto.subtle.digest('SHA-256', raw);
+        res.push([...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join(''));
+      }
+      return res;
+    }, { id: sessionId, n: report.frames.length });
+    check('cube thumbnails decode to the converter hashes', thumbOk.every((h, i) => h === report.frames[i].thumbRgbaSha256), { frames: thumbOk.length });
+
+    // Click a layer on the top face -> that step is selected.
+    const targetLayer = Math.min(2, last);
+    const pt = await page.evaluate((k) => {
+      const c = document.querySelector('canvas.cube');
+      const p = c.topFacePoint(k);
+      const r = c.getBoundingClientRect();
+      return { x: r.left + (p.x / 1200) * r.width, y: r.top + (p.y / 900) * r.height };
+    }, targetLayer);
+    await page.mouse.click(pt.x, pt.y);
+    await settled(page);
+    const afterLayer = await stageInfo(page);
+    check('cube: clicking a layer opens that step', afterLayer.scrub === last - targetLayer && afterLayer.stepId === steps[last - targetLayer].stepId, { selected: afterLayer.stepId });
+
+    // Click on the front face -> the cut moves; double-click resets.
+    const box = await page.locator('canvas.cube').boundingBox();
+    const cutBefore = await page.getAttribute('canvas.cube', 'data-cut');
+    await page.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.6);
+    const cutAfter = await page.getAttribute('canvas.cube', 'data-cut');
+    await page.mouse.dblclick(box.x + box.width * 0.2, box.y + box.height * 0.7);
+    const cutReset = await page.getAttribute('canvas.cube', 'data-cut');
+    check('cube: clicking the map sets a cut; double-click resets it', cutBefore === '1200,0' && cutAfter !== cutBefore && cutReset === '1200,0', { cutBefore, cutAfter, cutReset });
+
+    // Drag rotates without changing the step.
+    const stepBeforeDrag = (await stageInfo(page)).stepId;
+    const shotBefore = await page.locator('canvas.cube').screenshot();
+    await page.mouse.move(box.x + box.width * 0.9, box.y + box.height * 0.2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.3, { steps: 8 });
+    await page.mouse.up();
+    const shotAfter = await page.locator('canvas.cube').screenshot();
+    const stepAfterDrag = (await stageInfo(page)).stepId;
+    check('cube: drag rotates and keeps the step', !shotBefore.equals(shotAfter) && stepBeforeDrag === stepAfterDrag, { step: stepAfterDrag });
+    check('cube: no page errors', errors.length === 0, { errors });
+    if (shotDir) await page.screenshot({ path: `${shotDir}/cube-verify.png` });
+    await context.close();
+  }
+
   if (shotDir) {
     const { context, page } = await newPage({ viewport: { width: 1200, height: 900 } });
     for (const st of steps) {
