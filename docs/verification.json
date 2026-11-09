@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-11-09T03:52:18.217Z",
+  "checkedAt": "2026-11-09T05:08:59.454Z",
   "session": "ui-fixture",
   "sessionKind": "fixture",
   "browser": "chromium 153.0.8010.12",
@@ -8,9 +8,9 @@
   "sizes": {
     "frames": 3,
     "rawBytes": 12960000,
-    "chunkBytes": 163245,
-    "pngBytes": 133123,
-    "thumbChunkBytes": 61298
+    "chunkBytes": 161874,
+    "pngBytes": 171226,
+    "thumbChunkBytes": 61403
   },
   "passed": 31,
   "failed": 0,
@@ -19,11 +19,11 @@
       "name": "initial load shows first step",
       "ok": true,
       "state": "ready",
-      "stepId": "s01-outline",
+      "stepId": "s01",
       "frameIndex": "0",
-      "logStepId": "s01-outline",
+      "logStepId": "s01",
       "visibleSteps": 1,
-      "lastMsg": "[UI fixture placeholder] Added the grid and an outline polygon.",
+      "lastMsg": 996,
       "scrub": 0
     },
     {
@@ -45,55 +45,55 @@
       "errors": []
     },
     {
-      "name": "frame 0 (s01-outline) RGBA hash and size match original PNG",
+      "name": "frame 0 (s01) RGBA hash and size match original PNG",
       "ok": true,
-      "browser": "094c10f044676f75",
-      "original": "094c10f044676f75",
+      "browser": "b966f5a0adfbcca6",
+      "original": "b966f5a0adfbcca6",
       "size": "1200x900"
     },
     {
-      "name": "frame 1 (s02-points) RGBA hash and size match original PNG",
+      "name": "frame 1 (s02) RGBA hash and size match original PNG",
       "ok": true,
-      "browser": "d2e3dcd59010eb7d",
-      "original": "d2e3dcd59010eb7d",
+      "browser": "07b892530581eda8",
+      "original": "07b892530581eda8",
       "size": "1200x900"
     },
     {
-      "name": "frame 2 (s04-legend) RGBA hash and size match original PNG",
+      "name": "frame 2 (s04) RGBA hash and size match original PNG",
       "ok": true,
-      "browser": "fdd9cc110770fa01",
-      "original": "fdd9cc110770fa01",
+      "browser": "c4eb7fd5a58a7c2a",
+      "original": "c4eb7fd5a58a7c2a",
       "size": "1200x900"
     },
     {
-      "name": "step 1 s01-outline (success, frame 0) aligned",
+      "name": "step 1 s01 (success, frame 0) aligned",
       "ok": true,
       "state": "ready",
-      "logStepId": "s01-outline"
+      "logStepId": "s01"
     },
     {
-      "name": "step 2 s02-points (success, frame 1) aligned",
+      "name": "step 2 s02 (success, frame 1) aligned",
       "ok": true,
       "state": "ready",
-      "logStepId": "s02-points"
+      "logStepId": "s02"
     },
     {
-      "name": "step 3 s03-build-failed (error, frame null) aligned",
+      "name": "step 3 s03 (error, frame null) aligned",
       "ok": true,
       "state": "failed-step",
-      "logStepId": "s03-build-failed"
+      "logStepId": "s03"
     },
     {
-      "name": "step 4 s04-legend (success, frame 2) aligned",
+      "name": "step 4 s04 (success, frame 2) aligned",
       "ok": true,
       "state": "ready",
-      "logStepId": "s04-legend"
+      "logStepId": "s04"
     },
     {
-      "name": "step 5 s05-review (success, frame null) aligned",
+      "name": "step 5 s05 (success, frame null) aligned",
       "ok": true,
       "state": "no-capture",
-      "logStepId": "s05-review"
+      "logStepId": "s05"
     },
     {
       "name": "every move fetches at most the selected and one adjacent frame",
@@ -114,14 +114,14 @@
     {
       "name": "slow earlier frame does not replace the newer selection",
       "ok": true,
-      "selected": "s02-points",
+      "selected": "s02",
       "state": "ready"
     },
     {
       "name": "rapid key presses end on the selected step",
       "ok": true,
       "scrub": 3,
-      "stepId": "s04-legend",
+      "stepId": "s04",
       "state": "ready"
     },
     {
@@ -135,7 +135,7 @@
         0
       ],
       "scrub": 1,
-      "stepId": "s02-points",
+      "stepId": "s02",
       "state": "ready"
     },
     {
@@ -209,13 +209,13 @@
     {
       "name": "layers: clicking a step label opens that step",
       "ok": true,
-      "selected": "s02-points",
+      "selected": "s02",
       "layers": 2
     },
     {
       "name": "layers: drag turns the view and keeps the step",
       "ok": true,
-      "step": "s02-points"
+      "step": "s02"
     },
     {
       "name": "layers: no page errors",

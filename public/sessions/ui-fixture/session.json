@@ -6,16 +6,20 @@
     "en": "UI fixture (not the production session)",
     "ja": "UI確認用fixture（本番の制作記録ではありません）"
   },
-  "model": null,
+  "model": {
+    "provider": "OpenAI",
+    "name": "fixture-model",
+    "notes": "Chat Completions API, called from the browser"
+  },
   "recording": {
-    "en": "Fixture for testing the player. Frames are real 1200×900 screenshots of a synthetic test page (fixtures/ui-fixture/page). Message text is placeholder text, not a recorded AI conversation.",
-    "ja": "再生UIの確認用です。画像は合成テストページ（fixtures/ui-fixture/page）を1200×900で実際に撮影したものです。会話文は仮の文章で、AIとの実際の対話記録ではありません。"
+    "en": "UI fixture for testing the player. Built on the recording page with fixed placeholder replies in place of the OpenAI API. The screens are real renders of that code; the conversation is not a recorded AI session.",
+    "ja": "再生UIの確認用です。記録ページで、OpenAI APIの代わりに用意した仮の応答を使って作りました。画面はそのコードを実際に描画したものですが、会話はAIとの実際の記録ではありません。"
   },
   "dataSources": [
     {
       "name": {
-        "en": "None. Synthetic shapes drawn by the fixture page.",
-        "ja": "なし（fixtureページが描いた合成図形）"
+        "en": "Synthetic points made for the UI fixture (not real data)",
+        "ja": "Synthetic points made for the UI fixture (not real data)"
       },
       "license": null,
       "url": null
@@ -75,108 +79,122 @@
   },
   "steps": [
     {
-      "stepId": "s01-outline",
+      "stepId": "s01",
       "frameIndex": 0,
-      "timestamp": "2026-11-06T11:51:44Z",
+      "timestamp": "2026-11-09T05:06:07Z",
       "status": "success",
       "changeSummary": {
         "en": "Grid and one outline polygon.",
         "ja": "グリッドと外形ポリゴンを1つ。"
       },
-      "revision": null,
+      "revision": "d60756f760b5440f9f05c0c17a3b6a8ea2b4e9e4",
+      "codeDiff": "--- a/map/main.js\n+++ b/map/main.js\n@@ -1,2 +1,11 @@\n-// Step 0: an empty frame. The model replaces this file at each step.\n-svg.append('rect').attr('width', width).attr('height', height).attr('fill', '#f4f1ea');\n+svg.append('rect').attr('width', width).attr('height', height).attr('fill', '#eef1ee');\n+const grid = svg.append('g').attr('stroke', '#d6dbd6');\n+for (let x = 0; x <= width; x += 100) grid.append('line').attr('x1', x).attr('x2', x).attr('y2', height);\n+for (let y = 0; y <= height; y += 100) grid.append('line').attr('y1', y).attr('y2', y).attr('x2', width);\n+const pts = d3.range(36).map(i => {\n+  const a = (i / 36) * Math.PI * 2;\n+  const r = 300 + 40 * Math.sin(a * 3) + 25 * Math.cos(a * 5);\n+  return [600 + r * Math.cos(a) * 1.25, 450 + r * Math.sin(a) * 0.95];\n+});\n+svg.append('polygon').attr('points', pts.join(' ')).attr('fill', '#e3e6dc').attr('stroke', '#5a6b4f').attr('stroke-width', 2);\n+svg.append('text').attr('x', 24).attr('y', 40).attr('font-family', 'sans-serif').attr('font-size', 14).text('UI FIXTURE · synthetic shapes · not real data');",
       "messages": [
         {
           "role": "user",
-          "content": "[UI fixture placeholder] Draw a background grid and one outline."
+          "content": "[UI fixture placeholder prompt] Draw a background grid and one outline."
         },
         {
           "role": "assistant",
-          "content": "[UI fixture placeholder] Added the grid and an outline polygon."
+          "content": "Summary (en): Grid and one outline polygon.\nSummary (ja): グリッドと外形ポリゴンを1つ。\n\n[UI fixture placeholder reply] Added a grid and an outline.\n\n```js\nsvg.append('rect').attr('width', width).attr('height', height).attr('fill', '#eef1ee');\nconst grid = svg.append('g').attr('stroke', '#d6dbd6');\nfor (let x = 0; x <= width; x += 100) grid.append('line').attr('x1', x).attr('x2', x).attr('y2', height);\nfor (let y = 0; y <= height; y += 100) grid.append('line').attr('y1', y).attr('y2', y).attr('x2', width);\nconst pts = d3.range(36).map(i => {\n  const a = (i / 36) * Math.PI * 2;\n  const r = 300 + 40 * Math.sin(a * 3) + 25 * Math.cos(a * 5);\n  return [600 + r * Math.cos(a) * 1.25, 450 + r * Math.sin(a) * 0.95];\n});\nsvg.append('polygon').attr('points', pts.join(' ')).attr('fill', '#e3e6dc').attr('stroke', '#5a6b4f').attr('stroke-width', 2);\nsvg.append('text').attr('x', 24).attr('y', 40).attr('font-family', 'sans-serif').attr('font-size', 14).text('UI FIXTURE · synthetic shapes · not real data');\n```",
+          "model": "fixture-model"
         }
       ]
     },
     {
-      "stepId": "s02-points",
+      "stepId": "s02",
       "frameIndex": 1,
-      "timestamp": "2026-11-06T11:51:45Z",
+      "timestamp": "2026-11-09T05:06:08Z",
       "status": "success",
       "changeSummary": {
-        "en": "Eight proportional points added.",
-        "ja": "大きさの異なる点を8つ追加。"
+        "en": "Eight points sized by value.",
+        "ja": "値の大きさで点を8つ。"
       },
-      "revision": null,
+      "revision": "f4f397ee01cafb0842c703dd7fee427082fa752e",
+      "codeDiff": "--- a/map/main.js\n+++ b/map/main.js\n@@ -9,3 +9,7 @@\n });\n svg.append('polygon').attr('points', pts.join(' ')).attr('fill', '#e3e6dc').attr('stroke', '#5a6b4f').attr('stroke-width', 2);\n svg.append('text').attr('x', 24).attr('y', 40).attr('font-family', 'sans-serif').attr('font-size', 14).text('UI FIXTURE · synthetic shapes · not real data');\n+const rows = data['data/points.csv'];\n+svg.append('g').selectAll('circle').data(rows).join('circle')\n+  .attr('cx', d => d.x).attr('cy', d => d.y).attr('r', d => d.value)\n+  .attr('fill', '#3a6ea5').attr('fill-opacity', 0.8).attr('stroke', '#fff').attr('stroke-width', 1.5);",
       "messages": [
         {
           "role": "user",
-          "content": "[UI fixture placeholder] Add points sized by value."
+          "content": "[UI fixture placeholder prompt] Add the points from data/points.csv, sized by value."
         },
         {
           "role": "assistant",
-          "content": "[UI fixture placeholder] Added eight circles inside the outline."
+          "content": "Summary (en): Eight points sized by value.\nSummary (ja): 値の大きさで点を8つ。\n\n[UI fixture placeholder reply] Drew circles from the CSV.\n\n```js\nsvg.append('rect').attr('width', width).attr('height', height).attr('fill', '#eef1ee');\nconst grid = svg.append('g').attr('stroke', '#d6dbd6');\nfor (let x = 0; x <= width; x += 100) grid.append('line').attr('x1', x).attr('x2', x).attr('y2', height);\nfor (let y = 0; y <= height; y += 100) grid.append('line').attr('y1', y).attr('y2', y).attr('x2', width);\nconst pts = d3.range(36).map(i => {\n  const a = (i / 36) * Math.PI * 2;\n  const r = 300 + 40 * Math.sin(a * 3) + 25 * Math.cos(a * 5);\n  return [600 + r * Math.cos(a) * 1.25, 450 + r * Math.sin(a) * 0.95];\n});\nsvg.append('polygon').attr('points', pts.join(' ')).attr('fill', '#e3e6dc').attr('stroke', '#5a6b4f').attr('stroke-width', 2);\nsvg.append('text').attr('x', 24).attr('y', 40).attr('font-family', 'sans-serif').attr('font-size', 14).text('UI FIXTURE · synthetic shapes · not real data');\nconst rows = data['data/points.csv'];\nsvg.append('g').selectAll('circle').data(rows).join('circle')\n  .attr('cx', d => d.x).attr('cy', d => d.y).attr('r', d => d.value)\n  .attr('fill', '#3a6ea5').attr('fill-opacity', 0.8).attr('stroke', '#fff').attr('stroke-width', 1.5);\n```",
+          "model": "fixture-model"
         }
       ]
     },
     {
-      "stepId": "s03-build-failed",
+      "stepId": "s03",
       "frameIndex": null,
-      "timestamp": "2026-11-06T11:51:45Z",
+      "timestamp": "2026-11-09T05:06:08Z",
       "status": "error",
       "changeSummary": {
-        "en": "Build failed; no screen was captured.",
-        "ja": "ビルド失敗。画面は撮影していない。"
+        "en": "Run failed: ReferenceError: pointColour is not defined",
+        "ja": "実行に失敗：ReferenceError: pointColour is not defined"
       },
-      "revision": null,
+      "revision": "5b3e8a9ea61a7257bf131731ccd41e37c8422854",
+      "codeDiff": "--- a/map/main.js\n+++ b/map/main.js\n@@ -13,3 +13,4 @@\n svg.append('g').selectAll('circle').data(rows).join('circle')\n   .attr('cx', d => d.x).attr('cy', d => d.y).attr('r', d => d.value)\n   .attr('fill', '#3a6ea5').attr('fill-opacity', 0.8).attr('stroke', '#fff').attr('stroke-width', 1.5);\n+svg.selectAll('circle').attr('fill', pointColour);",
       "messages": [
         {
           "role": "user",
-          "content": "[UI fixture placeholder] Change the point colour and add a legend."
+          "content": "[UI fixture placeholder prompt] Change the point colour."
+        },
+        {
+          "role": "assistant",
+          "content": "Summary (en): Point colour changed.\nSummary (ja): 点の色を変更。\n\n[UI fixture placeholder reply] Changed the colour (this code has a deliberate error).\n\n```js\nsvg.append('rect').attr('width', width).attr('height', height).attr('fill', '#eef1ee');\nconst grid = svg.append('g').attr('stroke', '#d6dbd6');\nfor (let x = 0; x <= width; x += 100) grid.append('line').attr('x1', x).attr('x2', x).attr('y2', height);\nfor (let y = 0; y <= height; y += 100) grid.append('line').attr('y1', y).attr('y2', y).attr('x2', width);\nconst pts = d3.range(36).map(i => {\n  const a = (i / 36) * Math.PI * 2;\n  const r = 300 + 40 * Math.sin(a * 3) + 25 * Math.cos(a * 5);\n  return [600 + r * Math.cos(a) * 1.25, 450 + r * Math.sin(a) * 0.95];\n});\nsvg.append('polygon').attr('points', pts.join(' ')).attr('fill', '#e3e6dc').attr('stroke', '#5a6b4f').attr('stroke-width', 2);\nsvg.append('text').attr('x', 24).attr('y', 40).attr('font-family', 'sans-serif').attr('font-size', 14).text('UI FIXTURE · synthetic shapes · not real data');\nconst rows = data['data/points.csv'];\nsvg.append('g').selectAll('circle').data(rows).join('circle')\n  .attr('cx', d => d.x).attr('cy', d => d.y).attr('r', d => d.value)\n  .attr('fill', '#3a6ea5').attr('fill-opacity', 0.8).attr('stroke', '#fff').attr('stroke-width', 1.5);\nsvg.selectAll('circle').attr('fill', pointColour);\n```",
+          "model": "fixture-model"
         },
         {
           "role": "tool",
-          "content": "[UI fixture placeholder — synthetic error text]\n$ npm run build\nsrc/map.ts:42:7 - error TS2339: Property 'fillColour' does not exist on type 'PointStyle'.\nFound 1 error.",
-          "label": "build"
-        },
-        {
-          "role": "assistant",
-          "content": "[UI fixture placeholder] The property name was wrong. Fixing it."
+          "content": "ReferenceError: pointColour is not defined\n    at eval (eval at <anonymous> (about:srcdoc:27:16), <anonymous>:20:38)\n    at eval (eval at <anonymous> (about:srcdoc:27:16), <anonymous>:22:3)\n    at about:srcdoc:37:47",
+          "label": "run"
         }
       ]
     },
     {
-      "stepId": "s04-legend",
+      "stepId": "s04",
       "frameIndex": 2,
-      "timestamp": "2026-11-06T11:51:46Z",
+      "timestamp": "2026-11-09T05:06:09Z",
       "status": "success",
       "changeSummary": {
         "en": "Colour fixed; title and legend added.",
         "ja": "色を修正し、題名と凡例を追加。"
       },
-      "revision": null,
+      "revision": "5e7a476c75ddf5e0d419b9905b450c207a4939ef",
+      "codeDiff": "--- a/map/main.js\n+++ b/map/main.js\n@@ -7,10 +7,14 @@\n   const r = 300 + 40 * Math.sin(a * 3) + 25 * Math.cos(a * 5);\n   return [600 + r * Math.cos(a) * 1.25, 450 + r * Math.sin(a) * 0.95];\n });\n-svg.append('polygon').attr('points', pts.join(' ')).attr('fill', '#e3e6dc').attr('stroke', '#5a6b4f').attr('stroke-width', 2);\n+svg.append('polygon').attr('points', pts.join(' ')).attr('fill', '#d9e4c8').attr('stroke', '#5a6b4f').attr('stroke-width', 2);\n svg.append('text').attr('x', 24).attr('y', 40).attr('font-family', 'sans-serif').attr('font-size', 14).text('UI FIXTURE · synthetic shapes · not real data');\n const rows = data['data/points.csv'];\n svg.append('g').selectAll('circle').data(rows).join('circle')\n   .attr('cx', d => d.x).attr('cy', d => d.y).attr('r', d => d.value)\n-  .attr('fill', '#3a6ea5').attr('fill-opacity', 0.8).attr('stroke', '#fff').attr('stroke-width', 1.5);\n-svg.selectAll('circle').attr('fill', pointColour);\n+  .attr('fill', '#c4512d').attr('fill-opacity', 0.8).attr('stroke', '#fff').attr('stroke-width', 1.5);\n+svg.append('text').attr('x', 24).attr('y', 860).attr('font-family', 'sans-serif').attr('font-size', 30).attr('font-weight', 700).text('Fixture frame · title and legend');\n+const lg = svg.append('g').attr('transform', 'translate(1000,830)');\n+lg.append('rect').attr('width', 170).attr('height', 40).attr('fill', '#fff').attr('stroke', '#bbb');\n+lg.append('circle').attr('cx', 20).attr('cy', 20).attr('r', 7).attr('fill', '#c4512d');\n+lg.append('text').attr('x', 36).attr('y', 25).attr('font-family', 'sans-serif').attr('font-size', 15).text('synthetic points');",
       "messages": [
         {
+          "role": "user",
+          "content": "[UI fixture placeholder prompt] Fix the error, then add a title and a legend."
+        },
+        {
           "role": "assistant",
-          "content": "[UI fixture placeholder] Renamed the property, rebuilt, and added a title and legend."
+          "content": "Summary (en): Colour fixed; title and legend added.\nSummary (ja): 色を修正し、題名と凡例を追加。\n\n[UI fixture placeholder reply] Defined the colour and added a title and legend.\n\n```js\nsvg.append('rect').attr('width', width).attr('height', height).attr('fill', '#eef1ee');\nconst grid = svg.append('g').attr('stroke', '#d6dbd6');\nfor (let x = 0; x <= width; x += 100) grid.append('line').attr('x1', x).attr('x2', x).attr('y2', height);\nfor (let y = 0; y <= height; y += 100) grid.append('line').attr('y1', y).attr('y2', y).attr('x2', width);\nconst pts = d3.range(36).map(i => {\n  const a = (i / 36) * Math.PI * 2;\n  const r = 300 + 40 * Math.sin(a * 3) + 25 * Math.cos(a * 5);\n  return [600 + r * Math.cos(a) * 1.25, 450 + r * Math.sin(a) * 0.95];\n});\nsvg.append('polygon').attr('points', pts.join(' ')).attr('fill', '#d9e4c8').attr('stroke', '#5a6b4f').attr('stroke-width', 2);\nsvg.append('text').attr('x', 24).attr('y', 40).attr('font-family', 'sans-serif').attr('font-size', 14).text('UI FIXTURE · synthetic shapes · not real data');\nconst rows = data['data/points.csv'];\nsvg.append('g').selectAll('circle').data(rows).join('circle')\n  .attr('cx', d => d.x).attr('cy', d => d.y).attr('r', d => d.value)\n  .attr('fill', '#c4512d').attr('fill-opacity', 0.8).attr('stroke', '#fff').attr('stroke-width', 1.5);\nsvg.append('text').attr('x', 24).attr('y', 860).attr('font-family', 'sans-serif').attr('font-size', 30).attr('font-weight', 700).text('Fixture frame · title and legend');\nconst lg = svg.append('g').attr('transform', 'translate(1000,830)');\nlg.append('rect').attr('width', 170).attr('height', 40).attr('fill', '#fff').attr('stroke', '#bbb');\nlg.append('circle').attr('cx', 20).attr('cy', 20).attr('r', 7).attr('fill', '#c4512d');\nlg.append('text').attr('x', 36).attr('y', 25).attr('font-family', 'sans-serif').attr('font-size', 15).text('synthetic points');\n```",
+          "model": "fixture-model"
         }
       ]
     },
     {
-      "stepId": "s05-review",
+      "stepId": "s05",
       "frameIndex": null,
-      "timestamp": null,
+      "timestamp": "2026-11-09T05:06:09Z",
       "status": "success",
       "changeSummary": {
-        "en": "Review only; no screen captured.",
-        "ja": "確認のみ。画面は撮影していない。"
+        "en": "Review only; no code change.",
+        "ja": "確認のみ。コードの変更なし。"
       },
-      "revision": null,
+      "revision": "b2421bb4417cac922fb20da4fdf08994a1c01e80",
+      "codeDiff": null,
       "messages": [
         {
           "role": "user",
-          "content": "[UI fixture placeholder] Looks fine. No more changes."
+          "content": "[UI fixture placeholder prompt] Looks fine. No more changes."
         },
         {
-          "role": "note",
-          "content": "[UI fixture placeholder] Discussion-only step without a capture."
+          "role": "assistant",
+          "content": "Summary (en): Review only; no code change.\nSummary (ja): 確認のみ。コードの変更なし。\n\n[UI fixture placeholder reply] No change needed.",
+          "model": "fixture-model"
         }
       ]
     }

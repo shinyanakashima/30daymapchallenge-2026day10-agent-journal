@@ -15,6 +15,7 @@ export type Step = {
   status: 'success' | 'error';
   changeSummary: Bilingual;
   revision: string | null;
+  codeDiff?: string | null;
   messages: Message[];
 };
 
@@ -44,7 +45,24 @@ export type Session = {
   steps: Step[];
 };
 
-export async function loadSession(base: URL, requested: string | null): Promise<{ session: Session; url: URL }> {
+export type ArraySource = URL | ((key: string) => Promise<Uint8Array | undefined>);
+export type Loaded = { session: Session; source: (path: string) => ArraySource; local: boolean };
+
+export async function loadSession(base: URL, requested: string | null): Promise<Loaded> {
+  if (requested === 'local') {
+    const { previewReader } = await import('./local-store');
+    const r = previewReader();
+    const raw = await r.get('session.json');
+    if (!raw) throw new Error('No local preview in this browser. Build one on the recording page first.');
+    const session = JSON.parse(new TextDecoder().decode(raw)) as Session;
+    validate(session);
+    return { session, local: true, source: (path) => (key: string) => r.get(`${path}${key}`) };
+  }
+  const { session, url } = await loadRemote(base, requested);
+  return { session, local: false, source: (path) => new URL(path, url) };
+}
+
+async function loadRemote(base: URL, requested: string | null): Promise<{ session: Session; url: URL }> {
   let id = requested;
   if (!id) {
     const idx = await fetchJson<{ default: string }>(new URL('sessions/index.json', base));

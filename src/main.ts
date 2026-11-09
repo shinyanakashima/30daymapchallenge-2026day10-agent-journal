@@ -1,7 +1,8 @@
 import type { StackView } from './stack';
+import { renderMessageBody } from './fence';
 import { FrameSource } from './frames';
 import { t } from './i18n';
-import { loadSession, type Lang, type Session, type Step } from './session';
+import { loadSession, type ArraySource, type Lang, type Session, type Step } from './session';
 
 const REPO_URL = 'https://github.com/shinyanakashima/30daymapchallenge-2026day10-agent-journal';
 const PLAY_INTERVAL_MS = 2200;
@@ -31,7 +32,7 @@ const viewHint = $('view-hint');
 const params = new URLSearchParams(location.search);
 let lang: Lang = pickLang();
 let session: Session | null = null;
-let sessionUrl: URL | null = null;
+let arraySource: ((path: string) => ArraySource) | null = null;
 let frames: FrameSource | null = null;
 let current = 0;
 let lastDirection = 1;
@@ -71,7 +72,7 @@ function setView(v: View) {
 /** three.js and the thumbnails are loaded only when the layers view is first opened. */
 function ensureStack(): Promise<void> {
   if (stackLoad) return stackLoad;
-  if (!session || !sessionUrl) return Promise.resolve();
+  if (!session || !arraySource) return Promise.resolve();
   const s = session;
   stage.dataset.thumbs = 'loading';
   stackLoad = (async () => {
@@ -89,7 +90,7 @@ function ensureStack(): Promise<void> {
       const th = s.thumbnails;
       if (th?.path && th.count > 0) {
         const [, h, w] = th.shape;
-        const src = new FrameSource(new URL(th.path, sessionUrl!), w, h, th.count);
+        const src = new FrameSource(arraySource!(th.path), w, h, th.count);
         const all = await src.getAll(th.count);
         stack.setThumbs(all, w, h);
       }
@@ -315,16 +316,18 @@ function buildLog() {
     for (const m of step.messages) {
       const box = document.createElement('div');
       box.className = `msg ${m.role}`;
+      box.dataset.chars = String(m.content.length);
       const who = document.createElement('div');
       who.className = 'who';
       who.textContent = s.roles[m.role] + (m.label ? ` · ${m.label}` : '') + (m.model ? ` · ${m.model}` : '');
       const body = document.createElement('div');
       body.className = 'body';
-      body.textContent = m.content;
+      body.append(...renderMessageBody(m.content, s.codeLines));
       box.append(who, body);
       msgs.append(box);
     }
     li.append(head, sum, msgs);
+    if (step.codeDiff) li.append(diffBlock(step.codeDiff));
     return li;
   });
   log.replaceChildren(...stepEls);
@@ -338,10 +341,35 @@ function buildLog() {
   }));
 }
 
+function diffBlock(diff: string): HTMLElement {
+  const s = t(lang);
+  const det = document.createElement('details');
+  det.className = 'diff';
+  const lines = diff.split('\n');
+  const add = lines.filter((l) => l.startsWith('+') && !l.startsWith('+++')).length;
+  const del = lines.filter((l) => l.startsWith('-') && !l.startsWith('---')).length;
+  const summary = document.createElement('summary');
+  summary.textContent = `${s.codeChanges} `;
+  const a = document.createElement('span'); a.className = 'add'; a.textContent = `+${add}`;
+  const d = document.createElement('span'); d.className = 'del'; d.textContent = ` −${del}`;
+  summary.append(a, d);
+  const pre = document.createElement('pre');
+  for (const l of lines) {
+    const span = document.createElement('span');
+    span.className = l.startsWith('+++') || l.startsWith('---') ? 'f' : l.startsWith('+') ? 'add' : l.startsWith('-') ? 'del' : l.startsWith('@@') ? 'hunk' : '';
+    span.textContent = l + '\n';
+    pre.append(span);
+  }
+  det.append(summary, pre);
+  return det;
+}
+
 function renderLog() {
   stepEls.forEach((el, i) => {
     el.hidden = i > current;
     el.classList.toggle('current', i === current);
+    const det = el.querySelector('details.diff') as HTMLDetailsElement | null;
+    if (det && i !== current) det.open = false;
     if (i === current) el.setAttribute('aria-current', 'step');
     else el.removeAttribute('aria-current');
   });
@@ -376,6 +404,10 @@ function renderStatic() {
   const fixture = $('fixture');
   fixture.hidden = session.kind !== 'fixture';
   fixture.textContent = s.fixture;
+  const localNote = $('local-note');
+  localNote.hidden = app.dataset.local !== 'true';
+  localNote.textContent = s.localPreview;
+  if (app.dataset.local === 'true') fixture.hidden = true;
   renderFooter();
   buildLog();
   renderControls();
@@ -410,12 +442,15 @@ function renderFooter() {
   const src = document.createElement('a');
   src.href = REPO_URL;
   src.textContent = s.source;
+  const rec = document.createElement('a');
+  rec.href = './record.html';
+  rec.textContent = s.recorder;
   foot.replaceChildren(
     line(s.recording, session.recording[lang], ' ', s.frameNote),
     line(s.data, ...data),
     line(s.model, model),
     Object.assign(document.createElement('p'), { className: 'keys', textContent: s.keys }),
-    (() => { const p = document.createElement('p'); p.append(src); return p; })(),
+    (() => { const p = document.createElement('p'); p.append(src, ' · ', rec); return p; })(),
   );
 }
 
@@ -471,11 +506,13 @@ async function init() {
   setStage('loading', null, t(lang).loadingSession);
   const base = new URL(import.meta.env.BASE_URL, location.href);
   try {
-    const { session: s, url } = await loadSession(base, params.get('session'));
+    const loaded = await loadSession(base, params.get('session'));
+    const s = loaded.session;
     session = s;
-    sessionUrl = url;
+    arraySource = loaded.source;
+    if (loaded.local) app.dataset.local = 'true';
     if (s.frames.path && s.frames.count > 0) {
-      frames = new FrameSource(new URL(s.frames.path, url), s.viewport.width, s.viewport.height);
+      frames = new FrameSource(loaded.source(s.frames.path), s.viewport.width, s.viewport.height);
     }
     app.dataset.state = 'ready';
     renderStatic();

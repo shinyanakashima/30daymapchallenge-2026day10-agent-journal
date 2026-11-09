@@ -1,53 +1,53 @@
 {
   "sessionId": "ui-fixture",
-  "zarrPython": "3.4.2",
+  "builtWith": "browser (isomorphic-git, fast-png, fflate)",
   "codec": "bytes -> gzip(level=6)",
   "frames": [
     {
       "frameIndex": 0,
-      "stepId": "s01-outline",
-      "source": "captures/frame-1.png",
+      "stepId": "s01",
+      "source": "steps/s01/capture.png",
       "width": 1200,
       "height": 900,
-      "rgbaSha256": "094c10f044676f750db7ad3b7fca36b304e10c11f9b2238e9a913ea50ddc7a1f",
+      "rgbaSha256": "b966f5a0adfbcca6c98631f70458130e4630a97c21b10aa00ccc5519e9f28793",
       "rawBytes": 4320000,
-      "chunkBytes": 46425,
-      "pngBytes": 35705,
-      "thumbRgbaSha256": "7dc611041cff4651f6a1904497449eb5c443da9ae48021ab1a00dcf0958ad6e5",
-      "thumbChunkBytes": 17063
+      "chunkBytes": 46463,
+      "pngBytes": 49274,
+      "thumbRgbaSha256": "199789fb10dd686a5162b0fca2b5f59ab91adea38aacce10a0f1e8dcfbb581c2",
+      "thumbChunkBytes": 17149
     },
     {
       "frameIndex": 1,
-      "stepId": "s02-points",
-      "source": "captures/frame-2.png",
+      "stepId": "s02",
+      "source": "steps/s02/capture.png",
       "width": 1200,
       "height": 900,
-      "rgbaSha256": "d2e3dcd59010eb7daf328b4f7619cbc8a1957d349b2f04077c9d94c3300ccb18",
+      "rgbaSha256": "07b892530581eda8756344d4300af364ab1d3ea6409a142dcf16ccaeb1aff7f0",
       "rawBytes": 4320000,
-      "chunkBytes": 54291,
-      "pngBytes": 44098,
-      "thumbRgbaSha256": "6c60522125177a579f3d972f80357cc2a2e41fb34fc29748455ebae31fba2d54",
-      "thumbChunkBytes": 20020
+      "chunkBytes": 54113,
+      "pngBytes": 57274,
+      "thumbRgbaSha256": "aea3ed6d0f27c8a2729e46edaee75c476516cadac19d948d49917f14e7859eef",
+      "thumbChunkBytes": 20128
     },
     {
       "frameIndex": 2,
-      "stepId": "s04-legend",
-      "source": "captures/frame-3.png",
+      "stepId": "s04",
+      "source": "steps/s04/capture.png",
       "width": 1200,
       "height": 900,
-      "rgbaSha256": "fdd9cc110770fa01e10dcd285cb90f4a99d95fafa28bbceaf5156981835676b7",
+      "rgbaSha256": "c4eb7fd5a58a7c2a0884f6ee0cf473ac5d3104ecf9d8177d511a9f8cb231bafe",
       "rawBytes": 4320000,
-      "chunkBytes": 62529,
-      "pngBytes": 53320,
-      "thumbRgbaSha256": "2393ac3cb65f4eb6c3888e46e4d22e1678b4520db92c1aee5dbd51135348a009",
-      "thumbChunkBytes": 24215
+      "chunkBytes": 61298,
+      "pngBytes": 64678,
+      "thumbRgbaSha256": "ff8768404b040a37037afa4dd6bd9841c5e9e6cd089fe5f57b1af47e36d5ef15",
+      "thumbChunkBytes": 24126
     }
   ],
   "totals": {
     "frames": 3,
     "rawBytes": 12960000,
-    "chunkBytes": 163245,
-    "pngBytes": 133123,
-    "thumbChunkBytes": 61298
+    "chunkBytes": 161874,
+    "pngBytes": 171226,
+    "thumbChunkBytes": 61403
   }
 }

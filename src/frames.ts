@@ -11,14 +11,17 @@ export class FrameSource {
   private cache = new Map<number, Uint8Array>();
   private inflight = new Map<number, { promise: Promise<Uint8Array>; controller: AbortController; users: number }>();
 
-  constructor(url: URL, readonly width: number, readonly height: number, private capacity = 4) {
+  /** `source` is the array's URL, or a getter for paths relative to the array root (local preview). */
+  constructor(source: URL | ((key: string) => Promise<Uint8Array | undefined>), readonly width: number, readonly height: number, private capacity = 4) {
     this.capacity = Math.max(1, capacity);
-    const fetchStore = new zarr.FetchStore(url.href);
+    const fetchStore = source instanceof URL
+      ? new zarr.FetchStore(source.href)
+      : { get: (key: `/${string}`) => source(key) };
     // zarrita treats a missing chunk (404) as fill_value. Every frame is written,
     // so a missing chunk here is an error, not a blank frame.
     const store = {
       async get(key: `/${string}`, opts?: RequestInit) {
-        const bytes = await fetchStore.get(key, opts);
+        const bytes = await (fetchStore as zarr.FetchStore).get(key, opts);
         if (bytes === undefined && key.startsWith('/c/')) throw new Error(`Missing chunk ${key}`);
         return bytes;
       },

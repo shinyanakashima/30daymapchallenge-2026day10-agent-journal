@@ -8,9 +8,17 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "verify": "node scripts/verify-browser.mjs",
-    "screenshot": "node scripts/screenshot.mjs"
+    "screenshot": "node scripts/screenshot.mjs",
+    "verify:recorder": "node scripts/verify-recorder.mjs"
   },
   "dependencies": {
+    "@isomorphic-git/lightning-fs": "4.10.3",
+    "buffer": "6.0.3",
+    "d3": "7.9.0",
+    "diff": "9.0.0",
+    "fast-png": "8.0.0",
+    "fflate": "0.7.5",
+    "isomorphic-git": "1.44.4",
     "three": "0.186.1",
     "zarrita": "0.7.5"
   },

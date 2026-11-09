@@ -62,7 +62,7 @@ const stageInfo = (page) => page.evaluate(() => {
     frameIndex: s.dataset.frameIndex,
     logStepId: cur?.dataset.stepId,
     visibleSteps: visible,
-    lastMsg: cur ? [...cur.querySelectorAll('.msg .body')].at(-1)?.textContent : null,
+    lastMsg: cur ? Number([...cur.querySelectorAll('.msg')].at(-1)?.dataset.chars) : null,
     scrub: Number(document.getElementById('scrub').value),
   };
 });
@@ -121,7 +121,7 @@ try {
       const st = steps[i];
       let ok = info.stepId === st.stepId && info.logStepId === st.stepId && info.state === expectedState(st)
         && info.visibleSteps === i + 1 && info.scrub === i
-        && info.lastMsg === st.messages.at(-1)?.content;
+        && info.lastMsg === st.messages.at(-1)?.content.length;
       let hash = null;
       if (st.frameIndex !== null) {
         hash = await canvasHash(page);

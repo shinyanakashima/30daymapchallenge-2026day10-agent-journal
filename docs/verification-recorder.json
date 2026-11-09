@@ -1,0 +1,201 @@
+{
+  "checkedAt": "2026-11-09T05:09:05.661Z",
+  "browser": "chromium 153.0.8010.12",
+  "note": "OpenAI API replaced by fixtures/ui-fixture/mock-replies.json",
+  "sizes": {
+    "frames": 3,
+    "rawBytes": 12960000,
+    "chunkBytes": 161874,
+    "pngBytes": 171226,
+    "thumbChunkBytes": 61403
+  },
+  "passed": 17,
+  "failed": 0,
+  "results": [
+    {
+      "name": "five steps committed from five prompts",
+      "ok": true,
+      "steps": [
+        "s01",
+        "s02",
+        "s03",
+        "s04",
+        "s05"
+      ]
+    },
+    {
+      "name": "statuses and captures: ok, ok, failed run without capture, ok, no code change without capture",
+      "ok": true,
+      "ui": [
+        [
+          false,
+          true
+        ],
+        [
+          false,
+          true
+        ],
+        [
+          true,
+          false
+        ],
+        [
+          false,
+          true
+        ],
+        [
+          false,
+          false
+        ]
+      ]
+    },
+    {
+      "name": "failed run keeps the error as a tool message",
+      "ok": true,
+      "tool": "ReferenceError: pointColour is not defined"
+    },
+    {
+      "name": "API requests carry the key only in the Authorization header",
+      "ok": true,
+      "requests": 5
+    },
+    {
+      "name": "requests include system prompt, earlier turns, current code and data summary",
+      "ok": true,
+      "messages": 11
+    },
+    {
+      "name": "build: 3 frames in frames.zarr and thumbs.zarr",
+      "ok": true,
+      "frames": [
+        "s01",
+        "s02",
+        "s04"
+      ]
+    },
+    {
+      "name": "no page errors while recording",
+      "ok": true,
+      "errors": []
+    },
+    {
+      "name": "exported repository: git log shows setup, data and five step commits",
+      "ok": true,
+      "log": [
+        "Start journal",
+        "Add data: data/points.csv",
+        "Data source: data/points.csv",
+        "s01: Grid and one outline polygon.",
+        "s02: Eight points sized by value.",
+        "s03: Run failed: ReferenceError: pointColour is not defined",
+        "s04: Colour fixed; title and legend added.",
+        "s05: Review only; no code change."
+      ]
+    },
+    {
+      "name": "exported repository passes git fsck --strict",
+      "ok": true,
+      "fsck": "ok"
+    },
+    {
+      "name": "step commit holds the prompt, response, code change, screen SVG and PNG",
+      "ok": true,
+      "stat": " 6 files changed, 66 insertions(+), 3 deletions(-)"
+    },
+    {
+      "name": "zarr-python 3.4.2 reads the browser-built arrays; hashes match",
+      "ok": [
+        [
+          true,
+          true,
+          true
+        ],
+        [
+          true,
+          true,
+          true
+        ],
+        [
+          true,
+          true,
+          true
+        ]
+      ],
+      "shape": [
+        3,
+        900,
+        1200,
+        4
+      ],
+      "tshape": [
+        3,
+        450,
+        600,
+        4
+      ],
+      "zarr": "3.4.2"
+    },
+    {
+      "name": "Pillow decodes the committed PNGs to the same RGBA as the browser",
+      "ok": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "player previews the local build: states, pixels and code diffs per step",
+      "ok": true,
+      "seen": [
+        [
+          "s01",
+          "ready",
+          true
+        ],
+        [
+          "s02",
+          "ready",
+          true
+        ],
+        [
+          "s03",
+          "failed-step",
+          true
+        ],
+        [
+          "s04",
+          "ready",
+          true
+        ],
+        [
+          "s05",
+          "no-capture",
+          false
+        ]
+      ]
+    },
+    {
+      "name": "local preview is labelled as not published",
+      "ok": true
+    },
+    {
+      "name": "journal persists after reload (IndexedDB)",
+      "ok": true,
+      "steps": 5
+    },
+    {
+      "name": "exported repository imports into a fresh browser profile",
+      "ok": true
+    },
+    {
+      "name": "sandbox: no access to localStorage, cookies, network or the parent page",
+      "ok": true,
+      "probe": [
+        "blocked:SecurityError",
+        "blocked:SecurityError",
+        "blocked:TypeError",
+        "blocked:SecurityError"
+      ]
+    }
+  ]
+}
