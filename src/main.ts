@@ -2,13 +2,28 @@ import type { StackView } from './stack';
 import { renderMessageBody } from './fence';
 import { FrameSource } from './frames';
 import { t } from './i18n';
-import { loadSession, type ArraySource, type Lang, type Session, type Step } from './session';
+import { loadSession, type Lang, type Session, type Step } from './session';
 
 const REPO_URL = 'https://github.com/shinyanakashima/30daymapchallenge-2026day10-agent-journal';
 const PLAY_INTERVAL_MS = 2200;
 const SCRUB_SETTLE_MS = 90;
 
-type StageState = 'loading' | 'ready' | 'failed-step' | 'no-capture' | 'decode-error' | 'session-error';
+type StageState = 'loading' | 'ready' | 'failed-step' | 'no-capture' | 'decode-error' | 'session-error' | 'empty';
+
+/** Where frames come from: a Zarr array (published) or the live journal (recording). */
+export type FrameProvider = { has(i: number): boolean; get(i: number, signal?: AbortSignal): Promise<Uint8Array> };
+export type ThumbLoader = () => Promise<{ data: Uint8Array[]; width: number; height: number }>;
+
+/** What the recording mode needs from the player. */
+export type Host = {
+  lang(): Lang;
+  apply(s: Session, frames: FrameProvider | null, thumbs: ThumbLoader | null, pick: 'first' | 'last' | 'keep'): void;
+  empty(text: string): void;
+  pending(prompt: string, status: string): void;
+  onLang(cb: () => void): void;
+  sideBottom: HTMLElement;
+  headerTools: HTMLElement;
+};
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const app = $('app');
@@ -32,8 +47,9 @@ const viewHint = $('view-hint');
 const params = new URLSearchParams(location.search);
 let lang: Lang = pickLang();
 let session: Session | null = null;
-let arraySource: ((path: string) => ArraySource) | null = null;
-let frames: FrameSource | null = null;
+let thumbLoader: ThumbLoader | null = null;
+let frames: FrameProvider | null = null;
+const langListeners: (() => void)[] = [];
 let current = 0;
 let lastDirection = 1;
 let playing = false;
@@ -72,7 +88,7 @@ function setView(v: View) {
 /** three.js and the thumbnails are loaded only when the layers view is first opened. */
 function ensureStack(): Promise<void> {
   if (stackLoad) return stackLoad;
-  if (!session || !arraySource) return Promise.resolve();
+  if (!session) return Promise.resolve();
   const s = session;
   stage.dataset.thumbs = 'loading';
   stackLoad = (async () => {
@@ -87,12 +103,9 @@ function ensureStack(): Promise<void> {
         (i) => { setPlaying(false); select(i); },
       );
       stage.append(stack.element);
-      const th = s.thumbnails;
-      if (th?.path && th.count > 0) {
-        const [, h, w] = th.shape;
-        const src = new FrameSource(arraySource!(th.path), w, h, th.count);
-        const all = await src.getAll(th.count);
-        stack.setThumbs(all, w, h);
+      if (thumbLoader) {
+        const th = await thumbLoader();
+        stack.setThumbs(th.data, th.width, th.height);
       }
       stage.dataset.thumbs = 'ready';
     } catch (err) {
@@ -381,7 +394,7 @@ function renderLog() {
   });
   const el = stepEls[current];
   if (el) {
-    const side = $('side');
+    const side = $('side-scroll');
     // Keep the current step in view inside the conversation pane only.
     const top = el.offsetTop - log.offsetTop;
     if (side.scrollHeight > side.clientHeight) side.scrollTop = Math.max(0, top - 8);
@@ -447,15 +460,12 @@ function renderFooter() {
   const src = document.createElement('a');
   src.href = REPO_URL;
   src.textContent = s.source;
-  const rec = document.createElement('a');
-  rec.href = './record.html';
-  rec.textContent = s.recorder;
   foot.replaceChildren(
     line(s.recording, session.recording[lang], ' ', s.frameNote),
     line(s.data, ...data),
     line(s.model, model),
     Object.assign(document.createElement('p'), { className: 'keys', textContent: s.keys }),
-    (() => { const p = document.createElement('p'); p.append(src, ' · ', rec); return p; })(),
+    (() => { const p = document.createElement('p'); p.append(src); return p; })(),
   );
 }
 
@@ -476,6 +486,8 @@ function bind() {
     renderStatic();
     if (session) showFrame(current);
     refreshStack();
+    langListeners.forEach((cb) => cb());
+    renderVideoText();
   });
   document.addEventListener('keydown', (e) => {
     if (!session || e.altKey || e.ctrlKey || e.metaKey) return;
@@ -505,26 +517,133 @@ function bind() {
   });
 }
 
+function resetStack() {
+  stack?.dispose();
+  stack?.element.remove();
+  stack = null;
+  stackLoad = null;
+  delete stage.dataset.thumbs;
+}
+
+function apply(s: Session, frameProvider: FrameProvider | null, thumbs: ThumbLoader | null, pick: 'first' | 'last' | 'keep') {
+  const prev = current;
+  session = s;
+  frames = frameProvider;
+  thumbLoader = thumbs;
+  app.dataset.state = 'ready';
+  resetStack();
+  renderStatic();
+  let start = 0;
+  if (pick === 'last') start = s.steps.length - 1;
+  else if (pick === 'keep') start = Math.min(prev, s.steps.length - 1);
+  else {
+    const startId = params.get('step');
+    start = startId ? Math.max(0, s.steps.findIndex((st) => st.stepId === startId)) : 0;
+  }
+  current = start;
+  select(start);
+  setView(view);
+}
+
+function empty(text: string) {
+  session = null;
+  frames = null;
+  thumbLoader = null;
+  resetStack();
+  stepEls = [];
+  log.replaceChildren();
+  ticks.replaceChildren();
+  counter.textContent = '';
+  clearCanvas();
+  app.dataset.state = 'empty';
+  setStage('empty', null, text);
+}
+
+function pending(prompt: string, status: string) {
+  $('pending')?.remove();
+  if (!prompt) return;
+  const li = document.createElement('li');
+  li.id = 'pending';
+  li.className = 'step current pending';
+  const msg = document.createElement('div');
+  msg.className = 'msg user';
+  const who = document.createElement('div');
+  who.className = 'who';
+  who.textContent = t(lang).roles.user;
+  const body = document.createElement('div');
+  body.className = 'body';
+  body.textContent = prompt;
+  msg.append(who, body);
+  const st = document.createElement('p');
+  st.className = 'pending-status';
+  st.textContent = status;
+  li.append(msg, st);
+  stepEls.forEach((el) => el.classList.remove('current'));
+  log.append(li);
+  const side = $('side-scroll');
+  side.scrollTop = side.scrollHeight;
+}
+
+type VideoInfo = { src: string; poster?: string; caption?: { en: string; ja: string } };
+let video: VideoInfo | null = null;
+
+/** Optional video of the making, set in sessions/index.json as "video": { src, poster, caption }. */
+async function showVideo(base: URL) {
+  try {
+    const res = await fetch(new URL('sessions/index.json', base));
+    if (!res.ok) return;
+    const idx = (await res.json()) as { video?: VideoInfo | null };
+    if (!idx.video?.src) return;
+    video = idx.video;
+    const el = $<HTMLVideoElement>('video-el');
+    el.src = new URL(video.src, base).href;
+    if (video.poster) el.poster = new URL(video.poster, base).href;
+    renderVideoText();
+    $('video').hidden = false;
+  } catch { /* no video */ }
+}
+
+function renderVideoText() {
+  $('video-h').textContent = t(lang).videoTitle;
+  $('video-cap').textContent = video?.caption?.[lang] ?? '';
+}
+
 async function init() {
   renderStatic();
   bind();
+  if (params.get('mode') === 'record') {
+    app.dataset.mode = 'record';
+    setStage('loading', null, t(lang).loadingSession);
+    const host: Host = {
+      lang: () => lang,
+      apply,
+      empty,
+      pending,
+      onLang: (cb) => langListeners.push(cb),
+      sideBottom: $('side-bottom'),
+      headerTools: $('header-extra'),
+    };
+    const { startRecorder } = await import('./record/mode');
+    await startRecorder(host);
+    return;
+  }
   setStage('loading', null, t(lang).loadingSession);
   const base = new URL(import.meta.env.BASE_URL, location.href);
+  void showVideo(base);
   try {
     const loaded = await loadSession(base, params.get('session'));
     const s = loaded.session;
-    session = s;
-    arraySource = loaded.source;
     if (loaded.local) app.dataset.local = 'true';
-    if (s.frames.path && s.frames.count > 0) {
-      frames = new FrameSource(loaded.source(s.frames.path), s.viewport.width, s.viewport.height);
-    }
-    app.dataset.state = 'ready';
-    renderStatic();
-    const startId = params.get('step');
-    const start = startId ? s.steps.findIndex((st) => st.stepId === startId) : 0;
-    select(Math.max(0, start));
-    setView(view);
+    const fr = s.frames.path && s.frames.count > 0 ? new FrameSource(loaded.source(s.frames.path), s.viewport.width, s.viewport.height) : null;
+    const th = s.thumbnails;
+    const tl: ThumbLoader | null = th?.path && th.count > 0
+      ? async () => {
+        const [, h, w] = th.shape;
+        const src = new FrameSource(loaded.source(th.path!), w, h, th.count);
+        return { data: await src.getAll(th.count), width: w, height: h };
+      }
+      : null;
+    apply(s, fr, tl, 'first');
   } catch (err) {
     console.error(err);
     app.dataset.state = 'error';

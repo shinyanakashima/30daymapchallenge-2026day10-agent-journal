@@ -8,19 +8,22 @@ Make a map only by talking to an AI, then replay it step by step: the screen, pr
 | --- | --- |
 | ![Screen view (UI fixture)](docs/screenshot.png) | ![Layers view (UI fixture)](docs/screenshot-layers.png) |
 
-- 再生ページ：<https://shinyanakashima.github.io/30daymapchallenge-2026day10-agent-journal/>
-- 記録ページ：<https://shinyanakashima.github.io/30daymapchallenge-2026day10-agent-journal/record.html>
+- 再生：<https://shinyanakashima.github.io/30daymapchallenge-2026day10-agent-journal/>
+- 制作モード：<https://shinyanakashima.github.io/30daymapchallenge-2026day10-agent-journal/?mode=record>（OpenAI APIキーが必要。`record.html` からも移動します）
+
+公開する作品では、制作モードの代わりに制作の様子を収めた動画を載せます（再生画面の下）。
 
 ## 現在の状態
 
-- 再生ページ、記録ページ（OpenAI API、ブラウザ内Git、ブラウザ内でのZarr作成）、ブラウザ検証は実装済みです。
-- 掲載中の記録は **UI確認用fixture** です。記録ページでOpenAI APIの代わりに仮の応答を返して作りました。画面はそのコードを実際に描画したものですが、会話はAIとの実際の記録ではありません。画面上にもその旨を表示しています。
+- 再生と制作は1つの画面です。`?mode=record` を付けると、会話欄の下に入力欄が現れ、ヘッダーの「制作パネル」からキー・データ・書き出しを操作できます。制作中も、タイムラインと積層表示は記録（ブラウザ内のGit）をその場で読みます。
+- OpenAI API、ブラウザ内Git、ブラウザ内でのZarr作成、ブラウザ検証は実装済みです。
+- 掲載中の記録は **UI確認用fixture** です。制作モードでOpenAI APIの代わりに仮の応答を返して作りました。画面はそのコードを実際に描画したものですが、会話はAIとの実際の記録ではありません。画面上にもその旨を表示しています。
 - 地図の題材・使用データ・本番の制作会話は **未決定** です。
 
 ## 全体の流れ
 
 ```
-記録ページ（record.html）                          再生ページ（index.html）
+制作モード（index.html?mode=record）                再生（index.html）
   プロンプト → OpenAI → 応答とコード
            → 隔離した枠でコードを実行 → SVG → 1200×900 PNG
            → 1工程 = 1コミット（ブラウザ内のGit、main のみ）
@@ -29,13 +32,14 @@ Make a map only by talking to an AI, then replay it step by step: the screen, pr
 
 サーバーは使いません。Git・描画・Zarrの作成はすべて閲覧中のブラウザの中で行い、IndexedDBに保存します。
 
-## 記録ページ
+## 制作モード
 
 | 機能 | 内容 |
 | --- | --- |
+| 対話 | 会話欄の下の入力欄からプロンプトを送る。応答待ち・実行中は会話欄に表示し、終わると新しい工程として画面・タイムライン・積層に加わる |
+| 制作パネル | ヘッダーのボタンで開く。以下の操作をまとめている |
 | 記録 | 新規作成、リポジトリの書き出し／読み込み（.zip）、削除 |
 | モデル | OpenAI APIキーを保存し、モデル一覧から選ぶ |
-| 対話 | プロンプトを送ると、応答のコードを実行・撮影し、自動でコミットする |
 | データ | データファイルを `data/` に追加し、出典・ライセンス・URLを記入する |
 | 手動の工程 | APIを使わずに、プロンプト・応答・画面（SVGまたはPNG）・コードを記録する |
 | 書き出し | Gitの履歴から再生用のファイルを作り、ローカルでプレビューしてから .zip でダウンロードする |
@@ -78,7 +82,7 @@ steps/s01/screen.svg    描画されたSVG
 steps/s01/capture.png   1200×900 の画面
 ```
 
-## 再生ページ
+## 再生
 
 | 位置 | 内容 |
 | --- | --- |
@@ -89,7 +93,8 @@ steps/s01/capture.png   1200×900 の画面
 
 - 英語で表示し、日本語に切り替えられます（`?lang=ja`）。
 - キーボード：← → で工程移動、Home／End、Space で再生／停止、`C` で画面／積層の切り替え。
-- `?step=<stepId>`、`?session=<id>`、`?view=layers`。`?session=local` は記録ページで作ったローカルプレビューです。
+- `?step=<stepId>`、`?session=<id>`、`?view=layers`、`?mode=record`。`?session=local` は制作パネルで作ったローカルプレビューです。
+- `public/sessions/index.json` の `video` に `{ "src": "media/….mp4", "poster": "…", "caption": { "en": "…", "ja": "…" } }` を書くと、画面の下に動画を表示します。動画ファイルは `public/media/` に置きます。
 - 画像の状態を区別します：読み込み中／表示中／失敗した工程（画像なし）／画像のない工程／取得・復号の失敗（再試行ボタン付き）。失敗した工程に他の工程の画像を表示しません。
 - 応答の中のコードは折りたたみ、実際の変更は「コードの変更」に差分で表示します。
 
@@ -105,14 +110,14 @@ steps/s01/capture.png   1200×900 の画面
 | frames.zarr | shape `(N, 900, 1200, 4)`、chunks `(1, 900, 1200, 4)` |
 | thumbs.zarr | shape `(N, 450, 600, 4)`、chunks `(1, 450, 600, 4)`、2×2画素の平均 |
 | codec | `bytes` → `gzip(level=6)` |
-| 作成 | 記録ページ（fast-png でPNGを復号、fflate でgzip） |
+| 作成 | 制作モード（fast-png でPNGを復号、fflate でgzip） |
 | 読み込み | zarrita 0.7.5 の `FetchStore` で、選択した工程のチャンクだけを取得・復号する |
 
 役割：画面の並びを工程番号で索引し、1枚ずつ取り出すための配列です。積層表示では工程の軸をそのまま高さにしています。
 
 限界：
 
-- PNGより小さくなるとは限りません。fixtureの3枚では、gzipチャンクの合計が 161,874 B、記録ページが書いたPNGが 171,226 B でした。以前、Playwrightで撮ったPNG（より強く圧縮されたもの）と比べたときは、gzipの方が約1.2〜1.3倍大きくなりました。本番の画像で測り直します。
+- PNGより小さくなるとは限りません。fixtureの3枚では、gzipチャンクの合計が 161,874 B、制作モードが書いたPNGが 171,226 B でした。以前、Playwrightで撮ったPNG（より強く圧縮されたもの）と比べたときは、gzipの方が約1.2〜1.3倍大きくなりました。本番の画像で測り直します。
 - 画面ピクセルの配列で、地理参照付きラスタではありません。CRSや座標は持たせていません。会話とコードの差分は `session.json` に入れ、Zarrには入れていません。
 - zarrita は欠けたチャンクを既定で透明な黒として返すため、このアプリでは欠けたチャンクをエラーとして扱います。
 - 積層の層は縮小配列から作るため、細い線や文字は粗くなります。「変わった画素」は、前の画面とのRGBの差の合計が24を超えた画素です。地図の範囲を動かすと画面全体が「変わった」扱いになります。
@@ -122,7 +127,7 @@ steps/s01/capture.png   1200×900 の画面
 
 ```sh
 npm ci
-npm run dev          # http://localhost:5173/ と /record.html
+npm run dev          # http://localhost:5173/ と /?mode=record
 npm run build        # dist/（GitHub Pages 用、相対パス）
 ```
 
@@ -132,30 +137,31 @@ npm run build        # dist/（GitHub Pages 用、相対パス）
 npm run build
 npm run verify                         # 再生ページ：docs/verification.json
 node scripts/verify-recorder.mjs --python .venv/bin/python
-                                       # 記録ページ：docs/verification-recorder.json
-node scripts/verify-recorder.mjs --write-fixture   # fixture を記録ページで作り直す
+                                       # 制作モード：docs/verification-recorder.json
+node scripts/verify-recorder.mjs --write-fixture   # fixture を制作モードで作り直す
 npm run screenshot                     # docs/screenshot.png（1200×900）
 VIEW=layers OUT=docs/screenshot-layers.png npm run screenshot -- s05
 ```
 
 `--python` には zarr と Pillow の入ったPythonを渡します（`pip install -r tools/requirements.txt`）。ブラウザで作ったZarrをzarr-pythonで読み、PNGをPillowで復号して、ブラウザと同じRGBAになることを確かめます。
 
-`tools/` には、記録ページを使わずに作る場合の道具を残しています（`capture.mjs`：Playwrightで1200×900を撮影、`build_session.py`：PNGと記録JSONからZarrを作る）。
+`tools/` には、制作モードを使わずに作る場合の道具を残しています（`capture.mjs`：Playwrightで1200×900を撮影、`build_session.py`：PNGと記録JSONからZarrを作る）。
 
 ## 検証結果
 
-- 再生ページ `docs/verification.json`：31項目すべて合格。最初・中間・最後の画像のRGBA hash一致、工程と会話と画像の対応、高速操作で古い画像が上書きしないこと、工程ごとに必要なチャンクだけを取得すること、壊れた／欠けたチャンクのエラー表示、キーボード、日本語、モバイル、積層表示。
-- 記録ページ `docs/verification-recorder.json`：17項目すべて合格（OpenAI APIは仮の応答に置き換え）。5つのプロンプトから5工程のコミット、失敗した実行はエラーを残して画面なし、APIキーはAuthorizationヘッダーにだけ入る、ブラウザで作ったZarrをzarr-pythonが読めてhashが一致、PillowとブラウザのPNG復号が一致、書き出したリポジトリが `git fsck --strict` を通る、ローカルプレビュー、再読み込み後の保持、別のブラウザへの読み込み、隔離した枠からキー・cookie・通信・親ページに届かないこと。
+- 再生 `docs/verification.json`：31項目すべて合格。最初・中間・最後の画像のRGBA hash一致、工程と会話と画像の対応、高速操作で古い画像が上書きしないこと、工程ごとに必要なチャンクだけを取得すること、壊れた／欠けたチャンクのエラー表示、キーボード、日本語、モバイル、積層表示。
+- 制作モード `docs/verification-recorder.json`：19項目すべて合格（OpenAI APIは仮の応答に置き換え）。5つのプロンプトから5工程のコミット、制作中のタイムラインと積層表示が記録をその場で反映、失敗した実行はエラーを残して画面なし、APIキーはAuthorizationヘッダーにだけ入る、ブラウザで作ったZarrをzarr-pythonが読めてhashが一致、PillowとブラウザのPNG復号が一致、書き出したリポジトリが `git fsck --strict` を通る、ローカルプレビュー、再読み込み後の保持、別のブラウザへの読み込み、隔離した枠からキー・cookie・通信・親ページに届かないこと。
 
 確認はChromium（Playwright同梱版）で行いました。他のブラウザでは未検証です。
 
 ## ファイル構成
 
 ```
-index.html, src/main.ts     再生ページ
+index.html, src/main.ts     再生と制作の画面
 src/frames.ts               Zarr読み込み、キャッシュ、先読み、中断
 src/stack.ts                積層表示（three.js）
-record.html, src/record/    記録ページ
+src/record/mode.ts          制作モード（入力欄、制作パネル）
+src/record/                 制作に使う部品
   git.ts                    ブラウザ内Git（isomorphic-git + LightningFS）
   llm.ts                    OpenAI Chat Completions、指示文
   sandbox.ts                地図コードの隔離実行とSVGの画像化
@@ -163,7 +169,7 @@ record.html, src/record/    記録ページ
 fixtures/ui-fixture/        fixtureの仮の応答、データ、書き出したリポジトリ（journal.zip）
 public/sessions/            公開する記録
 scripts/                    検証、画面画像
-tools/                      記録ページを使わない場合の道具
+tools/                      制作モードを使わない場合の道具
 ```
 
 ## ライセンス

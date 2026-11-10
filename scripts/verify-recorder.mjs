@@ -57,24 +57,29 @@ async function mockOpenAI(context, replies, captured) {
   });
 }
 
-const stepCount = (page) => page.locator('#r-steps > li').count();
+const stepCount = (page) => page.locator('#log > li.step:not(.pending)').count();
 
 async function createJournal(page, id, titleEn, titleJa, kind) {
-  await page.goto(`${base}record.html?lang=en`);
+  await page.goto(`${base}record.html?lang=en`); // redirects to index.html?mode=record
+  await page.waitForSelector('#rec-panel[open]');
   await page.click('#j-new');
   await page.fill('#new-form [name=id]', id);
   await page.fill('#new-form [name=titleEn]', titleEn);
   await page.fill('#new-form [name=titleJa]', titleJa);
   await page.selectOption('#new-form [name=kind]', kind);
   await page.click('#new-form button[value=ok]');
-  await page.waitForSelector('#r-main:not([hidden])');
+  await page.waitForFunction(() => /0 (steps|工程)/.test(document.getElementById('j-info').textContent));
 }
+
+const closePanel = async (page) => { if (await page.isVisible('#rec-panel')) await page.click('#rec-close'); };
+const openPanel = async (page) => { if (!(await page.isVisible('#rec-panel'))) await page.click('#rec-open'); };
 
 async function send(page, prompt) {
   const before = await stepCount(page);
+  await closePanel(page);
   await page.fill('#r-prompt', prompt);
   await page.click('#r-send');
-  await page.waitForFunction((n) => document.querySelectorAll('#r-steps > li').length > n, before, { timeout: 30000 });
+  await page.waitForFunction((n) => !document.getElementById('pending') && document.querySelectorAll('#log > li.step:not(.pending)').length > n, before, { timeout: 30000 });
 }
 
 async function saveDownload(page, selector, file) {
@@ -96,9 +101,9 @@ try {
   await page.waitForFunction(() => document.getElementById('j-info').textContent.includes('3 commits'));
   for (const s of mock.steps) await send(page, s.prompt);
 
-  const ui = await page.evaluate(() => [...document.querySelectorAll('#r-steps > li')].map((li) => ({
-    id: li.dataset.stepId, error: li.classList.contains('error'), hasCapture: !!li.querySelector('.r-show'),
-    tool: li.querySelector('.r-msg.tool .body')?.textContent ?? null,
+  const ui = await page.evaluate(() => [...document.querySelectorAll('#log > li.step')].map((li) => ({
+    id: li.dataset.stepId, error: !!li.querySelector('.badge.error'), hasCapture: !li.querySelector('.badge.noframe'),
+    tool: li.querySelector('.msg.tool .body')?.textContent ?? null,
   })));
   check('five steps committed from five prompts', ui.length === 5, { steps: ui.map((s) => s.id) });
   const expect = [[false, true], [false, true], [true, false], [false, true], [false, false]];
@@ -112,7 +117,25 @@ try {
       && last.messages.at(-1).content.includes('Current map/main.js') && last.messages.at(-1).content.includes('data/points.csv'),
     { messages: last.messages.length });
 
+  // ---- the player shows the journal live ----
+  {
+    const live = await page.evaluate(async () => {
+      const s = document.getElementById('stage');
+      return { state: s.dataset.state, stepId: s.dataset.stepId, counter: document.getElementById('counter').textContent, ticks: document.querySelectorAll('#ticks .tick').length };
+    });
+    check('recording mode: timeline and stage follow the journal live', live.ticks === 5 && live.stepId === 's05' && live.state === 'no-capture', live);
+    await page.locator('body').click({ position: { x: 3, y: 3 } });
+    await page.keyboard.press('ArrowLeft');
+    await page.waitForFunction(() => document.getElementById('stage').dataset.state === 'ready');
+    await page.keyboard.press('c');
+    await page.waitForSelector('#stage[data-thumbs=ready]', { timeout: 20000 });
+    const layers = await page.evaluate(() => Number(document.querySelector('.stack').dataset.layers));
+    check('recording mode: layers view built from the journal', layers === 3, { layers });
+    await page.keyboard.press('c');
+  }
+
   // ---- build in the browser ----
+  await openPanel(page);
   await page.click('#b-build');
   await page.waitForSelector('#b-preview:not([hidden])', { timeout: 60000 });
   const report = JSON.parse(await page.getAttribute('#b-out', 'data-report'));
@@ -201,17 +224,16 @@ print(json.dumps({'shape': list(f.shape), 'tshape': list(t.shape), 'zarr': zarr.
 
   // ---- persistence and import ----
   await page.reload();
-  await page.waitForSelector('#r-main:not([hidden])');
-  const persisted = await page.waitForFunction(() => document.querySelectorAll('#r-steps > li').length === 5, null, { timeout: 15000 }).then(() => true, () => false);
+  const persisted = await page.waitForFunction(() => document.querySelectorAll('#log > li.step').length === 5, null, { timeout: 15000 }).then(() => true, () => false);
   check('journal persists after reload (IndexedDB)', persisted, { steps: await stepCount(page) });
   await context.close();
 
   {
     const { context: c2, page: p3 } = await newRecorder();
-    await p3.goto(`${base}record.html?lang=en`);
+    await p3.goto(`${base}index.html?mode=record&lang=en`);
+    await p3.waitForSelector('#rec-panel[open]');
     await p3.setInputFiles('#j-import', path.join(work, 'journal.zip'));
-    await p3.waitForSelector('#r-main:not([hidden])');
-    await p3.waitForFunction(() => document.querySelectorAll('#r-steps > li').length === 5);
+    await p3.waitForFunction(() => document.querySelectorAll('#log > li.step').length === 5);
     check('exported repository imports into a fresh browser profile', true);
     await c2.close();
   }
@@ -223,7 +245,7 @@ print(json.dumps({'shape': list(f.shape), 'tshape': list(t.shape), 'zarr': zarr.
     await mockOpenAI(c3, [probe], []);
     await createJournal(p4, 'probe', 'probe', 'probe', 'fixture');
     await send(p4, 'probe');
-    const tool = await p4.locator('#r-steps > li .r-msg.tool .body').first().textContent();
+    const tool = await p4.locator('#log > li.step .msg.tool .body').first().textContent();
     const parts = (tool.match(/probe\|([^\n]*)/)?.[1] ?? '').split('|');
     check('sandbox: no access to localStorage, cookies, network or the parent page',
       parts.length === 4 && parts[0].startsWith('blocked') && parts[1].startsWith('blocked') && parts[2].startsWith('blocked') && parts[3].startsWith('blocked') && !tool.includes(FAKE_KEY),

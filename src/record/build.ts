@@ -48,13 +48,29 @@ function codeDiff(changes: { path: string; before: Uint8Array | null; after: Uin
   return text;
 }
 
-/** Read the journal's Git history and build session.json + frames.zarr + thumbs.zarr in the browser. */
-export async function buildSession(allowEmails: string[] = []): Promise<BuildOutput> {
+export type Collected = {
+  meta: NonNullable<Awaited<ReturnType<typeof readMeta>>>;
+  steps: SessionStep[];
+  frames: Uint8Array[];
+  thumbs: Uint8Array[];
+  frameInfo: { stepId: string; source: string; png: number }[];
+  models: Set<string>;
+  problems: string[];
+};
+type SessionStep = {
+  stepId: string; frameIndex: number | null; timestamp: string; status: 'success' | 'error';
+  changeSummary: { en: string; ja: string }; revision: string; codeDiff: string | null; messages: Record<string, string>[];
+};
+
+const pngCache = new Map<string, { rgba: Uint8Array; thumb: Uint8Array }>();
+
+/** Read every step from the journal's Git history. Decoded captures are cached by commit. */
+export async function collect(allowEmails: string[] = []): Promise<Collected | null> {
   const meta = await readMeta();
-  if (!meta) throw new Error('No journal.');
+  if (!meta) return null;
   const commits = await history();
   const problems: string[] = [];
-  const steps: unknown[] = [];
+  const steps: SessionStep[] = [];
   const frames: Uint8Array[] = [];
   const thumbs: Uint8Array[] = [];
   const frameInfo: { stepId: string; source: string; png: number }[] = [];
@@ -76,49 +92,58 @@ export async function buildSession(allowEmails: string[] = []): Promise<BuildOut
     problems.push(...scanText(`${sf.changeSummary.en}\n${sf.changeSummary.ja}`, `${c.stepId}.changeSummary`, allowEmails));
     let frameIndex: number | null = null;
     if (sf.capture) {
+      const key = `${c.oid}:${sf.capture}`;
+      let hit = pngCache.get(key);
       const png = await readAt(c.oid, `${base}/${sf.capture}`);
       if (!png) throw new Error(`${c.stepId}: capture missing in commit ${c.oid.slice(0, 7)}`);
-      const img = decodePngRgba(png);
-      if (img.width !== W || img.height !== H) throw new Error(`${c.stepId}: capture is ${img.width}×${img.height}, expected ${W}×${H}`);
+      if (!hit) {
+        const img = decodePngRgba(png);
+        if (img.width !== W || img.height !== H) throw new Error(`${c.stepId}: capture is ${img.width}×${img.height}, expected ${W}×${H}`);
+        hit = { rgba: img.data, thumb: halve(img.data, W, H) };
+        pngCache.set(key, hit);
+      }
       frameIndex = frames.length;
-      frames.push(img.data);
-      thumbs.push(halve(img.data, W, H));
+      frames.push(hit.rgba);
+      thumbs.push(hit.thumb);
       frameInfo.push({ stepId: c.stepId, source: `${base}/${sf.capture}`, png: png.length });
     }
     const diff = codeDiff(await changedFiles(c.parent, c.oid));
     if (diff) problems.push(...scanText(diff, `${c.stepId}.codeDiff`, allowEmails));
-    steps.push({
-      stepId: sf.stepId,
-      frameIndex,
-      timestamp: sf.timestamp,
-      status: sf.status,
-      changeSummary: sf.changeSummary,
-      revision: c.oid,
-      codeDiff: diff,
-      messages,
-    });
+    steps.push({ stepId: sf.stepId, frameIndex, timestamp: sf.timestamp, status: sf.status, changeSummary: sf.changeSummary, revision: c.oid, codeDiff: diff, messages });
   }
-  if (!steps.length) throw new Error('The journal has no steps yet.');
+  return { meta, steps, frames, thumbs, frameInfo, models, problems };
+}
 
+export function sessionObject(c: Collected) {
+  const n = c.frames.length;
+  return {
+    schemaVersion: 1 as const,
+    id: c.meta.id,
+    kind: c.meta.kind,
+    title: c.meta.title,
+    model: c.models.size ? { provider: 'OpenAI', name: [...c.models].join(', '), notes: 'Chat Completions API, called from the browser' } : null,
+    recording: c.meta.recording,
+    dataSources: c.meta.dataSources.map(({ name, license, url }) => ({ name, license, url })),
+    viewport: { width: W, height: H, deviceScaleFactor: 1 },
+    frames: { path: n ? 'frames.zarr' : null, count: n, shape: [n, H, W, 4] as [number, number, number, number], dtype: 'uint8' as const, channels: 'RGBA' as const, dimensionNames: ['step', 'y', 'x', 'channel'], chunks: [1, H, W, 4], codecs: ['bytes', `gzip(level=${GZIP_LEVEL})`] },
+    thumbnails: { path: n ? 'thumbs.zarr' : null, count: n, shape: [n, H / 2, W / 2, 4] as [number, number, number, number], dtype: 'uint8', channels: 'RGBA', chunks: [1, H / 2, W / 2, 4], resampling: 'box' },
+    steps: c.steps,
+  };
+}
+
+/** Build session.json + frames.zarr + thumbs.zarr in the browser from the journal. */
+export async function buildSession(allowEmails: string[] = []): Promise<BuildOutput> {
+  const c = await collect(allowEmails);
+  if (!c) throw new Error('No journal.');
+  if (!c.steps.length) throw new Error('The journal has no steps yet.');
+  const { meta, frames, thumbs, frameInfo, problems } = c;
   const files = new Map<string, Uint8Array>();
   const n = frames.length;
   if (n) {
     for (const [k, v] of writeFramesArray(frames, H, W, 'Screen pixels, not a georeferenced raster.')) files.set(`frames.zarr/${k}`, v);
     for (const [k, v] of writeFramesArray(thumbs, H / 2, W / 2, 'Box-downsampled copy of frames.zarr for the layers view.')) files.set(`thumbs.zarr/${k}`, v);
   }
-  const session = {
-    schemaVersion: 1,
-    id: meta.id,
-    kind: meta.kind,
-    title: meta.title,
-    model: models.size ? { provider: 'OpenAI', name: [...models].join(', '), notes: 'Chat Completions API, called from the browser' } : null,
-    recording: meta.recording,
-    dataSources: meta.dataSources.map(({ name, license, url }) => ({ name, license, url })),
-    viewport: { width: W, height: H, deviceScaleFactor: 1 },
-    frames: { path: n ? 'frames.zarr' : null, count: n, shape: [n, H, W, 4], dtype: 'uint8', channels: 'RGBA', dimensionNames: ['step', 'y', 'x', 'channel'], chunks: [1, H, W, 4], codecs: ['bytes', `gzip(level=${GZIP_LEVEL})`] },
-    thumbnails: { path: n ? 'thumbs.zarr' : null, count: n, shape: [n, H / 2, W / 2, 4], dtype: 'uint8', channels: 'RGBA', chunks: [1, H / 2, W / 2, 4], resampling: 'box' },
-    steps,
-  };
+  const session = sessionObject(c);
   files.set('session.json', strToU8(JSON.stringify(session, null, 2) + '\n'));
 
   const reportFrames: BuildOutput['report']['frames'] = [];

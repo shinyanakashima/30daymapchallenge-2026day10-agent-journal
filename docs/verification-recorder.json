@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-11-10T07:33:44.372Z",
+  "checkedAt": "2026-11-10T14:08:23.841Z",
   "browser": "chromium 153.0.8010.12",
   "note": "OpenAI API replaced by fixtures/ui-fixture/mock-replies.json",
   "sizes": {
@@ -9,7 +9,7 @@
     "pngBytes": 171226,
     "thumbChunkBytes": 61403
   },
-  "passed": 17,
+  "passed": 19,
   "failed": 0,
   "results": [
     {
@@ -63,6 +63,19 @@
       "name": "requests include system prompt, earlier turns, current code and data summary",
       "ok": true,
       "messages": 11
+    },
+    {
+      "name": "recording mode: timeline and stage follow the journal live",
+      "ok": true,
+      "state": "no-capture",
+      "stepId": "s05",
+      "counter": "Step 05 / 05",
+      "ticks": 5
+    },
+    {
+      "name": "recording mode: layers view built from the journal",
+      "ok": true,
+      "layers": 3
     },
     {
       "name": "build: 3 frames in frames.zarr and thumbs.zarr",

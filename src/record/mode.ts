@@ -1,14 +1,16 @@
+// Recording mode of the player (?mode=record): prompts go to OpenAI, each step is a Git
+// commit in this browser, and the player shows the journal live.
 import './polyfill';
 import { strFromU8 } from 'fflate';
-import { renderMessageBody } from '../fence';
+import type { Host } from '../main';
 import { savePreview } from '../local-store';
-import { buildSession, zipBuild, type BuildOutput } from './build';
+import type { Session } from '../session';
+import { buildSession, collect, sessionObject, zipBuild, type BuildOutput } from './build';
 import * as J from './git';
 import * as L from './llm';
 import { decodePngRgba, encodePngRgba } from './png';
 import { HEIGHT, WIDTH, rasterize, runMap } from './sandbox';
 
-type Lang = 'en' | 'ja';
 const T = {
   en: {
     recorder: 'Recorder', player: 'Player', journal: 'Journal', newJournal: 'New journal', importZip: 'Import repository (.zip)',
@@ -28,6 +30,8 @@ const T = {
     needModel: 'Choose a model first.', ranOk: 'Drawn', ranFail: 'Failed', noCapture: 'no capture', saveSource: 'Save', source: 'Source', licence: 'Licence',
     remove: 'Remove', confirmWipe: 'Delete the journal stored in this browser? This cannot be undone.', keySaved: 'Key saved in this browser.',
     keyForgotten: 'Key removed from this browser.', modelsLoaded: 'models', building: 'Building…', blocked: 'Build stopped. Remove these before publishing:',
+    studio: 'Studio', close: 'Close', noSteps: 'The journal has no steps yet. Send a prompt to start.',
+    recordingMode: 'Recording mode — the journal is kept in this browser', modelNone: 'no model selected', openStudio: 'Open the studio to set the key and model',
     keyPh: 'OpenAI API key (sk-…)', promptPh: 'Ask for a change to the map…',
     roles: { user: 'Prompt', assistant: 'Response', tool: 'Tool output', note: 'Note' } as Record<string, string>,
     lastCapture: 'Last capture', liveRun: 'Current code (not committed)', apiError: 'Request failed. Nothing was committed.', copy: 'Copy',
@@ -50,25 +54,111 @@ const T = {
     needModel: '先にモデルを選んでください。', ranOk: '描画', ranFail: '失敗', noCapture: '画像なし', saveSource: '保存', source: '出典', licence: 'ライセンス',
     remove: '削除', confirmWipe: 'このブラウザに保存されている記録を削除しますか？元に戻せません。', keySaved: 'キーをこのブラウザに保存しました。',
     keyForgotten: 'キーをこのブラウザから消去しました。', modelsLoaded: '個のモデル', building: '作成中…', blocked: '書き出しを止めました。公開前に次を取り除いてください：',
+    studio: '制作パネル', close: '閉じる', noSteps: 'まだ工程がありません。プロンプトを送って始めてください。',
+    recordingMode: '制作モード：記録はこのブラウザに保存されます', modelNone: 'モデル未選択', openStudio: '制作パネルでキーとモデルを設定',
     keyPh: 'OpenAI APIキー（sk-…）', promptPh: '地図への変更を依頼する…',
     roles: { user: 'プロンプト', assistant: '応答', tool: 'ツール出力', note: 'メモ' } as Record<string, string>,
     lastCapture: '最後のキャプチャ', liveRun: '今のコード（未コミット）', apiError: 'リクエストに失敗しました。コミットはしていません。', copy: 'コピー',
   },
 };
 
+
 const $ = <E extends HTMLElement>(id: string) => document.getElementById(id) as E;
-let lang: Lang = (() => {
-  const q = new URLSearchParams(location.search).get('lang');
-  if (q === 'en' || q === 'ja') return q;
-  try { const s = localStorage.getItem('day10-lang'); if (s === 'en' || s === 'ja') return s; } catch { /* */ }
-  return 'en';
-})();
-const t = () => T[lang];
-const canvas = $<HTMLCanvasElement>('r-canvas');
-const ctx = canvas.getContext('2d')!;
+let host: Host;
+const t = () => T[host.lang()];
 let busy = false;
+let apiFailed = false;
 let lastBuild: BuildOutput | null = null;
 const AUTHOR_KEY = 'day10-author';
+
+const PANEL = `
+<dialog id="rec-panel" class="rec-panel" aria-labelledby="rp-h">
+  <div class="rp-head"><h2 id="rp-h" data-t="studio">Studio</h2><button id="rec-close" type="button" data-t="close">Close</button></div>
+  <section>
+    <h3 data-t="journal">Journal</h3>
+    <p class="j-info" id="j-info"></p>
+    <div class="btn-row">
+      <button id="j-new" type="button" data-t="newJournal">New journal</button>
+      <label class="filebtn"><span data-t="importZip">Import repository (.zip)</span><input id="j-import" type="file" accept=".zip,application/zip"></label>
+      <button id="j-export" type="button" data-t="exportZip">Export repository (.zip)</button>
+      <button id="j-wipe" type="button" class="danger" data-t="deleteJournal">Delete journal</button>
+    </div>
+  </section>
+  <section>
+    <h3 data-t="model">Model</h3>
+    <div class="btn-row">
+      <input id="s-key" type="password" autocomplete="off" spellcheck="false" data-tp="keyPh" placeholder="OpenAI API key (sk-…)" aria-label="OpenAI API key">
+      <button id="s-save" type="button" data-t="saveKey">Save key</button>
+      <button id="s-forget" type="button" data-t="forgetKey">Forget key</button>
+    </div>
+    <div class="btn-row">
+      <select id="s-model" aria-label="Model"></select>
+      <button id="s-models" type="button" data-t="loadModels">Load models</button>
+    </div>
+    <p class="note" data-t="keyNote"></p>
+    <p class="note mono" id="r-run-status"></p>
+  </section>
+  <section>
+    <h3 data-t="dataFiles">Data files</h3>
+    <p class="note" data-t="dataNote"></p>
+    <ul id="d-list" class="d-list"></ul>
+    <label class="filebtn"><span data-t="addData">Add data files</span><input id="d-add" type="file" multiple></label>
+  </section>
+  <section>
+    <h3>map/main.js</h3>
+    <div class="btn-row"><button id="r-run" type="button" data-t="runCode">Run current code</button></div>
+    <figure class="r-preview"><canvas id="r-canvas" width="1200" height="900"></canvas><figcaption id="r-cap"></figcaption></figure>
+    <details class="r-code"><summary>map/main.js</summary><pre id="r-code"></pre></details>
+  </section>
+  <section>
+    <details class="r-manual">
+      <summary data-t="manualStep">Add a step without the API</summary>
+      <form id="m-form">
+        <label><span data-t="prompt">Prompt</span><textarea name="user" rows="3"></textarea></label>
+        <label><span data-t="response">Response</span><textarea name="assistant" rows="3"></textarea></label>
+        <label><span data-t="summaryEn">Summary (English)</span><input name="summaryEn" required></label>
+        <label><span data-t="summaryJa">Summary (Japanese)</span><input name="summaryJa"></label>
+        <label><span data-t="status">Status</span><select name="status"><option value="success">success</option><option value="error">error</option></select></label>
+        <label><span data-t="capture">Screen</span><input name="capture" type="file" accept="image/png,image/svg+xml,.svg"></label>
+        <label><span data-t="codeFile">New map/main.js</span><textarea name="code" rows="4" spellcheck="false"></textarea></label>
+        <button type="submit" data-t="commitStep">Commit step</button>
+      </form>
+    </details>
+  </section>
+  <section>
+    <h3 data-t="publish">Build for the player</h3>
+    <div class="btn-row">
+      <button id="b-build" type="button" class="primary" data-t="build">Build Zarr and preview</button>
+      <a id="b-preview" href="./index.html?session=local" target="_blank" rel="noopener" hidden data-t="openPreview">Open preview</a>
+      <button id="b-download" type="button" hidden data-t="downloadSession">Download session (.zip)</button>
+    </div>
+    <pre id="b-out" class="b-out" hidden></pre>
+    <p class="note" data-t="buildNote"></p>
+  </section>
+</dialog>
+<dialog id="new-dialog" class="rec-panel small">
+  <form method="dialog" id="new-form">
+    <h2 data-t="newJournal">New journal</h2>
+    <label><span data-t="sessionId">Session ID</span> <input name="id" required pattern="[A-Za-z0-9._-]+" value="production-2026"></label>
+    <label><span data-t="titleEn">Title (English)</span> <input name="titleEn" required></label>
+    <label><span data-t="titleJa">Title (Japanese)</span> <input name="titleJa"></label>
+    <label><span data-t="kind">Kind</span>
+      <select name="kind"><option value="production">production</option><option value="fixture">fixture</option></select>
+    </label>
+    <p class="note" data-t="newNote"></p>
+    <div class="btn-row end"><button value="cancel" formnovalidate data-t="cancel">Cancel</button><button value="ok" class="primary" data-t="create">Create</button></div>
+  </form>
+</dialog>`;
+
+const COMPOSER = `
+<form id="r-chat" class="r-chat">
+  <textarea id="r-prompt" rows="3" data-tp="promptPh" placeholder="Ask for a change to the map…" aria-label="Prompt"></textarea>
+  <div class="r-chat-row">
+    <button id="r-model-line" type="button" class="r-model-line"></button>
+    <span id="r-busy" class="r-busy" aria-live="polite"></span>
+    <button id="r-send" type="submit" class="primary" data-t="send">Send</button>
+  </div>
+</form>`;
 
 function author(): J.Author {
   try { const a = JSON.parse(localStorage.getItem(AUTHOR_KEY) ?? 'null'); if (a?.name) return a; } catch { /* */ }
@@ -76,10 +166,10 @@ function author(): J.Author {
 }
 
 function setText() {
-  document.documentElement.lang = lang;
+  const lang = host.lang();
   document.querySelectorAll<HTMLElement>('[data-t]').forEach((el) => {
-    const k = el.dataset.t as keyof (typeof T)['en'];
-    const v = T[lang][k];
+    if (!el.closest('#rec-panel, #new-dialog, #r-chat, #rec-open')) return;
+    const v = T[lang][el.dataset.t as keyof (typeof T)['en']];
     if (typeof v === 'string') el.textContent = v;
   });
   document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[data-tp]').forEach((el) => {
@@ -87,7 +177,13 @@ function setText() {
     const v = T[lang][el.dataset.tp as keyof (typeof T)['en']];
     if (typeof v === 'string') el.placeholder = v;
   });
-  $('r-lang').dataset.lang = lang;
+  renderModelLine();
+}
+
+function renderModelLine() {
+  const m = L.loadModel();
+  const k = L.loadKey();
+  $('r-model-line').textContent = k && m ? `${m} · ${t().studio}` : t().openStudio;
 }
 
 function setBusy(text: string) {
@@ -97,16 +193,15 @@ function setBusy(text: string) {
 }
 
 function show(rgba: Uint8Array | Uint8ClampedArray, caption: string) {
+  const ctx = $<HTMLCanvasElement>('r-canvas').getContext('2d')!;
   ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba.buffer as ArrayBuffer, rgba.byteOffset, rgba.byteLength), WIDTH, HEIGHT), 0, 0);
   $('r-cap').textContent = caption;
 }
 
 function blank(caption: string) {
-  ctx.clearRect(0, 0, WIDTH, HEIGHT);
+  $<HTMLCanvasElement>('r-canvas').getContext('2d')!.clearRect(0, 0, WIDTH, HEIGHT);
   $('r-cap').textContent = caption;
 }
-
-// ---------- data files ----------
 
 async function dataFiles(): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
@@ -157,7 +252,7 @@ async function renderData() {
       m.dataSources = [...m.dataSources.filter((d) => d.path !== path), entry];
       await J.writeMeta(m);
       await J.commitAll(`Data source: ${path}`, author());
-      await refresh();
+      await refresh('keep');
     });
     form.querySelector('.rm')!.addEventListener('click', async () => {
       await J.deleteFile(path);
@@ -165,106 +260,43 @@ async function renderData() {
       m.dataSources = m.dataSources.filter((d) => d.path !== path);
       await J.writeMeta(m);
       await J.commitAll(`Remove data: ${path}`, author());
-      await refresh();
+      await refresh('keep');
     });
     li.append(name, form);
     list.append(li);
   }
 }
 
-// ---------- steps ----------
 
-type StepView = { stepId: string; oid: string; step: J.StepFile; messages: { role: string; content: string; label?: string; model?: string }[]; capture: Uint8Array | null };
-
-async function loadSteps(): Promise<StepView[]> {
-  const out: StepView[] = [];
-  for (const c of await J.history()) {
-    if (!c.stepId) continue;
-    const base = `steps/${c.stepId}`;
-    const step = JSON.parse(strFromU8((await J.readAt(c.oid, `${base}/step.json`))!)) as J.StepFile;
-    const messages = [];
-    for (const m of step.messages) messages.push({ ...m, content: strFromU8((await J.readAt(c.oid, `${base}/${m.file}`)) ?? new Uint8Array()) });
-    const capture = step.capture ? await J.readAt(c.oid, `${base}/${step.capture}`) : null;
-    out.push({ stepId: c.stepId, oid: c.oid, step, messages, capture });
-  }
-  return out;
-}
-
-function renderSteps(steps: StepView[]) {
-  const ol = $('r-steps');
-  ol.replaceChildren(...steps.map((s, i) => {
-    const li = document.createElement('li');
-    li.className = `r-step ${s.step.status}`;
-    li.dataset.stepId = s.stepId;
-    const head = document.createElement('div');
-    head.className = 'r-step-head';
-    const num = document.createElement('span');
-    num.className = 'r-num';
-    num.textContent = String(i + 1).padStart(2, '0');
-    const st = document.createElement('span');
-    st.className = `badge ${s.step.status}`;
-    st.textContent = s.step.status === 'error' ? t().ranFail : t().ranOk;
-    head.append(num, st);
-    if (!s.capture) {
-      const nc = document.createElement('span');
-      nc.className = 'badge noframe';
-      nc.textContent = t().noCapture;
-      head.append(nc);
-    }
-    const oid = document.createElement('code');
-    oid.className = 'r-oid';
-    oid.textContent = `${s.stepId} · ${s.oid.slice(0, 7)}`;
-    head.append(oid);
-    const sum = document.createElement('p');
-    sum.className = 'r-sum';
-    sum.textContent = s.step.changeSummary[lang] || s.step.changeSummary.en;
-    li.append(head, sum);
-    for (const m of s.messages) {
-      const d = document.createElement('div');
-      d.className = `r-msg ${m.role}`;
-      const who = document.createElement('div');
-      who.className = 'who';
-      who.textContent = (t().roles[m.role] ?? m.role) + (m.label ? ` · ${m.label}` : '') + (m.model ? ` · ${m.model}` : '');
-      const body = document.createElement('div');
-      body.className = 'body';
-      body.append(...renderMessageBody(m.content.trimEnd(), (n) => (lang === 'ja' ? `コード（${n}行）` : `Code (${n} lines)`)));
-      d.append(who, body);
-      li.append(d);
-    }
-    if (s.capture) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'r-show';
-      b.textContent = lang === 'ja' ? '画面を表示' : 'Show screen';
-      b.addEventListener('click', () => { const img = decodePngRgba(s.capture!); show(img.data, `${s.stepId} · ${t().lastCapture}`); });
-      head.append(b);
-    }
-    return li;
-  }));
-  ol.scrollTop = ol.scrollHeight;
-}
-
-async function refresh() {
+/** Re-read the journal and hand it to the player. */
+async function refresh(pick: 'first' | 'last' | 'keep') {
   const has = await J.hasRepo();
   const meta = has ? await J.readMeta() : null;
-  $('r-main').hidden = !meta;
-  $('r-build').hidden = !meta;
-  $('j-export').toggleAttribute('disabled', !meta);
-  $('j-wipe').toggleAttribute('disabled', !meta);
-  $('b-build').toggleAttribute('disabled', !meta);
+  for (const id of ['j-export', 'j-wipe', 'b-build', 'r-send', 'r-run']) $(id).toggleAttribute('disabled', !meta);
   if (!meta) {
     $('j-info').textContent = t().noJournal;
+    $('d-list').replaceChildren();
+    $('r-code').textContent = '';
+    host.empty(t().noJournal);
     return;
   }
+  const c = await collect();
   const commits = await J.history();
-  const steps = await loadSteps();
-  $('j-info').textContent = `${meta.title[lang] || meta.title.en} · ${meta.id} · ${meta.kind} · ${steps.length} ${t().steps} · ${commits.length} ${t().commits}`;
+  $('j-info').textContent = `${meta.title[host.lang()] || meta.title.en} · ${meta.id} · ${meta.kind} · ${c?.steps.length ?? 0} ${t().steps} · ${commits.length} ${t().commits}`;
   $('r-code').textContent = (await J.readText('map/main.js')) ?? '';
-  renderSteps(steps);
   await renderData();
-  const last = [...steps].reverse().find((s) => s.capture);
-  if (last) show(decodePngRgba(last.capture!).data, `${last.stepId} · ${t().lastCapture}`);
-  else blank('');
+  if (!c || !c.steps.length) {
+    host.empty(t().noSteps);
+    return;
+  }
+  const frames = c.frames;
+  const thumbs = c.thumbs;
+  host.apply(
+    sessionObject(c) as unknown as Session,
+    { has: (i) => i >= 0 && i < frames.length, get: async (i) => frames[i] },
+    async () => ({ data: thumbs, width: WIDTH / 2, height: HEIGHT / 2 }),
+    pick,
+  );
 }
 
 // ---------- running and the model ----------
@@ -280,7 +312,7 @@ async function runCurrent(code: string): Promise<{ ok: true; rgba: Uint8ClampedA
   }
 }
 
-function nextStepId(steps: StepView[]): string {
+function nextStepId(steps: { stepId: string }[]): string {
   const used = new Set(steps.map((s) => s.stepId));
   let n = steps.length + 1;
   let id = `s${String(n).padStart(2, '0')}`;
@@ -293,7 +325,9 @@ async function sendPrompt(prompt: string) {
   if (!key) { alert(t().needKey); return; }
   const model = ($('s-model') as HTMLSelectElement).value;
   if (!model) { alert(t().needModel); return; }
-  const steps = await loadSteps();
+  const c = await collect();
+  if (!c) return;
+  const steps = c.steps;
   const system = (await J.readText('prompts/system.md')) ?? L.SYSTEM_PROMPT;
   const code = (await J.readText('map/main.js')) ?? '';
   const files = await dataFiles();
@@ -308,12 +342,15 @@ async function sendPrompt(prompt: string) {
   history.push({ role: 'user', content: L.contextMessage(prompt, code, Object.entries(files).map(([path, text]) => ({ path, size: text.length, preview: previewOf(path, text) }))) });
 
   setBusy(t().thinking);
+  host.pending(prompt, t().thinking);
   let reply: L.ChatResult;
   try {
     reply = await L.chat(key, model, history);
   } catch (e) {
     setBusy('');
-    $('r-run-status').textContent = `${t().apiError} ${(e as Error).message}`;
+    host.pending('', '');
+    $('r-busy').textContent = `${t().apiError} ${(e as Error).message}`;
+    apiFailed = true;
     return;
   }
   const parsed = L.parseReply(reply.content);
@@ -329,17 +366,18 @@ async function sendPrompt(prompt: string) {
   if (parsed.code) {
     filesOut['map/main.js'] = parsed.code;
     setBusy(t().running);
+    host.pending(prompt, t().running);
     const run = await runCurrent(parsed.code);
     if (run.ok) {
       capturePng = run.png;
       screenSvg = run.svg;
-      show(run.rgba, t().liveRun);
+
     } else {
       status = 'error';
       messages.push({ role: 'tool', label: 'run', content: run.error });
       const first = run.error.split('\n')[0].slice(0, 120);
       summary = { en: `Run failed: ${first}`, ja: `実行に失敗：${first}` };
-      blank(`${t().ranFail}: ${first}`);
+
     }
   }
   setBusy(t().committing);
@@ -354,12 +392,12 @@ async function sendPrompt(prompt: string) {
     llm: { provider: 'OpenAI', model: reply.model, usage: reply.usage },
   }, author());
   setBusy('');
-  await refresh();
+  await refresh('last');
 }
 
 async function commitManual(form: HTMLFormElement) {
   const fd = new FormData(form);
-  const steps = await loadSteps();
+  const steps = (await collect())?.steps ?? [];
   const messages: J.NewStep['messages'] = [];
   const user = String(fd.get('user') ?? '').trim();
   const assistant = String(fd.get('assistant') ?? '').trim();
@@ -391,7 +429,7 @@ async function commitManual(form: HTMLFormElement) {
     files: code.trim() ? { 'map/main.js': code.endsWith('\n') ? code : code + '\n' } : {},
   }, author());
   form.reset();
-  await refresh();
+  await refresh('last');
 }
 
 // ---------- build ----------
@@ -454,12 +492,6 @@ svg.append('rect').attr('width', width).attr('height', height).attr('fill', '#f4
 `;
 
 function bind() {
-  $('r-lang').addEventListener('click', () => {
-    lang = lang === 'en' ? 'ja' : 'en';
-    try { localStorage.setItem('day10-lang', lang); } catch { /* */ }
-    setText();
-    void refresh();
-  });
   $('j-new').addEventListener('click', () => $<HTMLDialogElement>('new-dialog').showModal());
   $('new-form').addEventListener('submit', async (e) => {
     const f = e.target as HTMLFormElement;
@@ -480,7 +512,7 @@ function bind() {
       },
       dataSources: [],
     }, L.SYSTEM_PROMPT, STARTER, author());
-    await refresh();
+    await refresh('last');
   });
   $('j-import').addEventListener('change', async (e) => {
     const input = e.target as HTMLInputElement;
@@ -492,7 +524,7 @@ function bind() {
       alert((err as Error).message);
     }
     input.value = '';
-    await refresh();
+    await refresh('last');
   });
   $('j-export').addEventListener('click', async () => {
     const meta = await J.readMeta();
@@ -501,7 +533,7 @@ function bind() {
   $('j-wipe').addEventListener('click', async () => {
     if (!confirm(t().confirmWipe)) return;
     await J.wipe();
-    await refresh();
+    await refresh('last');
   });
   $('d-add').addEventListener('change', async (e) => {
     const input = e.target as HTMLInputElement;
@@ -511,7 +543,7 @@ function bind() {
       await J.commitAll(`Add data: data/${name}`, author());
     }
     input.value = '';
-    await refresh();
+    await refresh('last');
   });
   $('r-run').addEventListener('click', async () => {
     setBusy(t().running);
@@ -545,15 +577,19 @@ function bind() {
       $('r-run-status').textContent = (e as Error).message;
     }
   });
-  $('s-model').addEventListener('change', () => L.saveModel($<HTMLSelectElement>('s-model').value));
+  $('s-model').addEventListener('change', () => { L.saveModel($<HTMLSelectElement>('s-model').value); renderModelLine(); });
+  $('rec-open').addEventListener('click', () => $<HTMLDialogElement>('rec-panel').showModal());
+  $('rec-close').addEventListener('click', () => $<HTMLDialogElement>('rec-panel').close());
+  $('r-model-line').addEventListener('click', () => $<HTMLDialogElement>('rec-panel').showModal());
   $('r-chat').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (busy) return;
     const ta = $<HTMLTextAreaElement>('r-prompt');
     const prompt = ta.value.trim();
     if (!prompt) return;
+    apiFailed = false;
     await sendPrompt(prompt);
-    if (!$('r-run-status').textContent?.startsWith(t().apiError)) ta.value = '';
+    if (!apiFailed) ta.value = '';
   });
   $('r-prompt').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); $<HTMLFormElement>('r-chat').requestSubmit(); }
@@ -563,9 +599,24 @@ function bind() {
   $('b-download').addEventListener('click', () => { if (lastBuild) download(zipBuild(lastBuild), `session-${lastBuild.id}.zip`); });
 }
 
-setText();
-bind();
-const k = L.loadKey();
-if (k) $<HTMLInputElement>('s-key').placeholder = '••••••••' + k.slice(-4);
-renderModels([]);
-void refresh();
+
+export async function startRecorder(h: Host) {
+  host = h;
+  document.body.insertAdjacentHTML('beforeend', PANEL);
+  host.sideBottom.innerHTML = COMPOSER;
+  const open = document.createElement('button');
+  open.id = 'rec-open';
+  open.type = 'button';
+  open.className = 'rec-open';
+  open.dataset.t = 'studio';
+  host.headerTools.append(open);
+  setText();
+  bind();
+  host.onLang(() => { setText(); void refresh('keep'); });
+  const k = L.loadKey();
+  if (k) $<HTMLInputElement>('s-key').placeholder = '••••••••' + k.slice(-4);
+  renderModels([]);
+  renderModelLine();
+  await refresh('last');
+  if (!(await J.hasRepo())) $<HTMLDialogElement>('rec-panel').showModal();
+}

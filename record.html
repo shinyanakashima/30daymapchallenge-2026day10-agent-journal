@@ -3,123 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Map Rewind Recorder</title>
-  <meta name="description" content="Make a map with an AI, one step at a time. Each step is a Git commit in this browser; the steps become a Zarr array for the player.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Serif+JP:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
-  <link rel="stylesheet" href="./src/record/record.css">
+  <title>Map Rewind</title>
+  <meta name="robots" content="noindex">
+  <script>
+    // The recorder is now part of the player (?mode=record).
+    var q = new URLSearchParams(location.search); q.set('mode', 'record');
+    location.replace('./index.html?' + q.toString());
+  </script>
+  <style>body{background:#121211;color:#ebe6d8;font:15px system-ui,sans-serif;padding:24px}a{color:inherit}</style>
 </head>
-<body>
-  <header class="r-top">
-    <div>
-      <p class="kicker"><span class="brand">Map Rewind</span> <span class="tag">#30DayMapChallenge 2026 · Day 10: Prompting only</span></p>
-      <h1 data-t="recorder">Recorder</h1>
-    </div>
-    <nav>
-      <a href="./index.html" data-t="player">Player</a>
-      <button id="r-lang" class="lang" type="button"><span data-l="en" lang="en">EN</span> / <span data-l="ja" lang="ja">日本語</span></button>
-    </nav>
-  </header>
-
-  <section class="r-journal" aria-labelledby="j-h">
-    <h2 id="j-h" class="sr" data-t="journal">Journal</h2>
-    <div class="j-info" id="j-info"></div>
-    <div class="j-actions">
-      <button id="j-new" type="button" data-t="newJournal">New journal</button>
-      <label class="filebtn"><span data-t="importZip">Import repository (.zip)</span><input id="j-import" type="file" accept=".zip,application/zip"></label>
-      <button id="j-export" type="button" data-t="exportZip">Export repository (.zip)</button>
-      <button id="j-wipe" type="button" class="danger" data-t="deleteJournal">Delete journal</button>
-    </div>
-  </section>
-
-  <dialog id="new-dialog">
-    <form method="dialog" id="new-form">
-      <h2 data-t="newJournal">New journal</h2>
-      <label><span data-t="sessionId">Session ID</span> <input name="id" required pattern="[A-Za-z0-9._-]+" value="production-2026"></label>
-      <label><span data-t="titleEn">Title (English)</span> <input name="titleEn" required></label>
-      <label><span data-t="titleJa">Title (Japanese)</span> <input name="titleJa"></label>
-      <label><span data-t="kind">Kind</span>
-        <select name="kind"><option value="production">production</option><option value="fixture">fixture</option></select>
-      </label>
-      <p class="note" data-t="newNote">This replaces the journal stored in this browser. Export the current one first if you need it.</p>
-      <div class="row"><button value="cancel" formnovalidate data-t="cancel">Cancel</button><button value="ok" class="primary" data-t="create">Create</button></div>
-    </form>
-  </dialog>
-
-  <main class="r-main" id="r-main">
-    <section class="r-left">
-      <figure class="r-preview">
-        <canvas id="r-canvas" width="1200" height="900"></canvas>
-        <figcaption id="r-cap"></figcaption>
-      </figure>
-      <div class="row">
-        <button id="r-run" type="button" data-t="runCode">Run current code</button>
-        <span id="r-run-status" class="muted"></span>
-      </div>
-      <details class="r-code"><summary>map/main.js</summary><pre id="r-code"></pre></details>
-
-      <section class="r-data" aria-labelledby="d-h">
-        <h2 id="d-h" data-t="dataFiles">Data files</h2>
-        <p class="note" data-t="dataNote">Open data only. Record the source and licence; they are shown under the map.</p>
-        <ul id="d-list"></ul>
-        <label class="filebtn"><span data-t="addData">Add data files</span><input id="d-add" type="file" multiple></label>
-      </section>
-    </section>
-
-    <section class="r-right">
-      <section class="r-settings" aria-labelledby="s-h">
-        <h2 id="s-h" data-t="model">Model</h2>
-        <div class="row">
-          <input id="s-key" type="password" autocomplete="off" spellcheck="false" placeholder="OpenAI API key (sk-…)" data-tp="keyPh" aria-label="OpenAI API key">
-          <button id="s-save" type="button" data-t="saveKey">Save key</button>
-          <button id="s-forget" type="button" data-t="forgetKey">Forget key</button>
-        </div>
-        <div class="row">
-          <select id="s-model" aria-label="Model"></select>
-          <button id="s-models" type="button" data-t="loadModels">Load models</button>
-        </div>
-        <p class="note" data-t="keyNote">The key is stored in this browser only and sent only to api.openai.com. It is never written to the journal. Requests are billed to your OpenAI account.</p>
-      </section>
-
-      <ol class="r-steps" id="r-steps" aria-live="polite"></ol>
-
-      <form id="r-chat" class="r-chat">
-        <textarea id="r-prompt" rows="4" placeholder="Ask for a change to the map…" data-tp="promptPh" aria-label="Prompt"></textarea>
-        <div class="row">
-          <button id="r-send" type="submit" class="primary" data-t="send">Send</button>
-          <span class="muted" data-t="sendHint">Ctrl+Enter</span>
-          <span id="r-busy" class="muted" aria-live="polite"></span>
-        </div>
-      </form>
-
-      <details class="r-manual">
-        <summary data-t="manualStep">Add a step without the API</summary>
-        <form id="m-form">
-          <label><span data-t="prompt">Prompt</span><textarea name="user" rows="3"></textarea></label>
-          <label><span data-t="response">Response</span><textarea name="assistant" rows="3"></textarea></label>
-          <label><span data-t="summaryEn">Summary (English)</span><input name="summaryEn" required></label>
-          <label><span data-t="summaryJa">Summary (Japanese)</span><input name="summaryJa"></label>
-          <label><span data-t="status">Status</span><select name="status"><option value="success">success</option><option value="error">error</option></select></label>
-          <label><span data-t="capture">Screen (SVG, or PNG at 1200×900)</span><input name="capture" type="file" accept="image/png,image/svg+xml,.svg"></label>
-          <label><span data-t="codeFile">New map/main.js (optional)</span><textarea name="code" rows="4" spellcheck="false"></textarea></label>
-          <button type="submit" data-t="commitStep">Commit step</button>
-        </form>
-      </details>
-    </section>
-  </main>
-
-  <section class="r-build" id="r-build" aria-labelledby="b-h">
-    <h2 id="b-h" data-t="publish">Build for the player</h2>
-    <div class="row">
-      <button id="b-build" type="button" class="primary" data-t="build">Build Zarr and preview</button>
-      <a id="b-preview" href="./index.html?session=local" target="_blank" rel="noopener" hidden data-t="openPreview">Open preview</a>
-      <button id="b-download" type="button" hidden data-t="downloadSession">Download session (.zip)</button>
-    </div>
-    <pre id="b-out" class="b-out" hidden></pre>
-    <p class="note" data-t="buildNote">Everything is built in this browser: session.json from the Git history, frames.zarr and thumbs.zarr from the captures. Put the downloaded folder in public/sessions/ to publish it.</p>
-  </section>
-
-  <script type="module" src="./src/record/main.ts"></script>
-</body>
+<body><p><a href="./index.html?mode=record">Map Rewind — recording mode</a></p></body>
 </html>

@@ -1,6 +1,10 @@
 {
   "default": "ui-fixture",
   "sessions": [
-    { "id": "ui-fixture", "kind": "fixture" }
-  ]
+    {
+      "id": "ui-fixture",
+      "kind": "fixture"
+    }
+  ],
+  "video": null
 }

@@ -19,6 +19,7 @@
         <h1 class="title" id="title">Map Rewind</h1>
       </div>
       <div class="top-tools">
+        <div id="header-extra" class="header-extra"></div>
         <div class="views" id="views" role="group" aria-label="View">
           <button id="view-screen" type="button" aria-pressed="true">Screen</button>
           <button id="view-layers" type="button" aria-pressed="false">Layers</button>
@@ -38,8 +39,11 @@
     </main>
 
     <aside class="side" id="side" aria-labelledby="side-h">
-      <h2 id="side-h" class="side-h">Conversation up to this step</h2>
-      <ol class="log" id="log"></ol>
+      <div class="side-scroll" id="side-scroll">
+        <h2 id="side-h" class="side-h">Conversation up to this step</h2>
+        <ol class="log" id="log"></ol>
+      </div>
+      <div class="side-bottom" id="side-bottom"></div>
     </aside>
 
     <nav class="controls" id="controls" aria-label="Timeline">
@@ -56,6 +60,11 @@
     </nav>
    </div>
 
+    <section class="video" id="video" hidden aria-labelledby="video-h">
+      <h2 id="video-h">Video</h2>
+      <video id="video-el" controls preload="metadata" playsinline></video>
+      <p class="video-cap" id="video-cap"></p>
+    </section>
     <footer class="foot" id="foot"></footer>
   </div>
   <script type="module" src="./src/main.ts"></script>
