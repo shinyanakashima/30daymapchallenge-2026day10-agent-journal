@@ -152,6 +152,7 @@ node scripts/verify-recorder.mjs --python .venv/bin/python
 node scripts/verify-recorder.mjs --write-fixture   # fixture を制作モードで作り直す
 npm run screenshot                     # docs/screenshot.png（1200×900）
 VIEW=layers OUT=docs/screenshot-layers.png npm run screenshot -- s05
+npm run video -- <id> --lang ja --out public/media/day10-ja.mp4   # 再生の動画（ffmpeg が必要）
 ```
 
 `--python` には zarr と Pillow の入ったPythonを渡します（`pip install -r tools/requirements.txt`）。ブラウザで作ったZarrをzarr-pythonで読み、PNGをPillowで復号して、ブラウザと同じRGBAになることを確かめます。
