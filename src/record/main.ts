@@ -28,6 +28,8 @@ const T = {
     needModel: 'Choose a model first.', ranOk: 'Drawn', ranFail: 'Failed', noCapture: 'no capture', saveSource: 'Save', source: 'Source', licence: 'Licence',
     remove: 'Remove', confirmWipe: 'Delete the journal stored in this browser? This cannot be undone.', keySaved: 'Key saved in this browser.',
     keyForgotten: 'Key removed from this browser.', modelsLoaded: 'models', building: 'Building…', blocked: 'Build stopped. Remove these before publishing:',
+    keyPh: 'OpenAI API key (sk-…)', promptPh: 'Ask for a change to the map…',
+    roles: { user: 'Prompt', assistant: 'Response', tool: 'Tool output', note: 'Note' } as Record<string, string>,
     lastCapture: 'Last capture', liveRun: 'Current code (not committed)', apiError: 'Request failed. Nothing was committed.', copy: 'Copy',
   },
   ja: {
@@ -48,6 +50,8 @@ const T = {
     needModel: '先にモデルを選んでください。', ranOk: '描画', ranFail: '失敗', noCapture: '画像なし', saveSource: '保存', source: '出典', licence: 'ライセンス',
     remove: '削除', confirmWipe: 'このブラウザに保存されている記録を削除しますか？元に戻せません。', keySaved: 'キーをこのブラウザに保存しました。',
     keyForgotten: 'キーをこのブラウザから消去しました。', modelsLoaded: '個のモデル', building: '作成中…', blocked: '書き出しを止めました。公開前に次を取り除いてください：',
+    keyPh: 'OpenAI APIキー（sk-…）', promptPh: '地図への変更を依頼する…',
+    roles: { user: 'プロンプト', assistant: '応答', tool: 'ツール出力', note: 'メモ' } as Record<string, string>,
     lastCapture: '最後のキャプチャ', liveRun: '今のコード（未コミット）', apiError: 'リクエストに失敗しました。コミットはしていません。', copy: 'コピー',
   },
 };
@@ -75,10 +79,15 @@ function setText() {
   document.documentElement.lang = lang;
   document.querySelectorAll<HTMLElement>('[data-t]').forEach((el) => {
     const k = el.dataset.t as keyof (typeof T)['en'];
-    if (T[lang][k]) el.textContent = T[lang][k];
+    const v = T[lang][k];
+    if (typeof v === 'string') el.textContent = v;
   });
-  $('r-lang').textContent = lang === 'en' ? '日本語' : 'English';
-  $('r-lang').lang = lang === 'en' ? 'ja' : 'en';
+  document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[data-tp]').forEach((el) => {
+    if (el.id === 's-key' && L.loadKey()) return;
+    const v = T[lang][el.dataset.tp as keyof (typeof T)['en']];
+    if (typeof v === 'string') el.placeholder = v;
+  });
+  $('r-lang').dataset.lang = lang;
 }
 
 function setBusy(text: string) {
@@ -189,7 +198,23 @@ function renderSteps(steps: StepView[]) {
     li.dataset.stepId = s.stepId;
     const head = document.createElement('div');
     head.className = 'r-step-head';
-    head.textContent = `${i + 1}. ${s.stepId} · ${s.step.status === 'error' ? t().ranFail : t().ranOk}${s.capture ? '' : ` · ${t().noCapture}`} · ${s.oid.slice(0, 7)}`;
+    const num = document.createElement('span');
+    num.className = 'r-num';
+    num.textContent = String(i + 1).padStart(2, '0');
+    const st = document.createElement('span');
+    st.className = `badge ${s.step.status}`;
+    st.textContent = s.step.status === 'error' ? t().ranFail : t().ranOk;
+    head.append(num, st);
+    if (!s.capture) {
+      const nc = document.createElement('span');
+      nc.className = 'badge noframe';
+      nc.textContent = t().noCapture;
+      head.append(nc);
+    }
+    const oid = document.createElement('code');
+    oid.className = 'r-oid';
+    oid.textContent = `${s.stepId} · ${s.oid.slice(0, 7)}`;
+    head.append(oid);
     const sum = document.createElement('p');
     sum.className = 'r-sum';
     sum.textContent = s.step.changeSummary[lang] || s.step.changeSummary.en;
@@ -199,7 +224,7 @@ function renderSteps(steps: StepView[]) {
       d.className = `r-msg ${m.role}`;
       const who = document.createElement('div');
       who.className = 'who';
-      who.textContent = m.role + (m.label ? ` · ${m.label}` : '') + (m.model ? ` · ${m.model}` : '');
+      who.textContent = (t().roles[m.role] ?? m.role) + (m.label ? ` · ${m.label}` : '') + (m.model ? ` · ${m.model}` : '');
       const body = document.createElement('div');
       body.className = 'body';
       body.append(...renderMessageBody(m.content.trimEnd(), (n) => (lang === 'ja' ? `コード（${n}行）` : `Code (${n} lines)`)));
@@ -210,10 +235,9 @@ function renderSteps(steps: StepView[]) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'r-show';
-      b.textContent = '▣';
-      b.title = 'Show capture';
+      b.textContent = lang === 'ja' ? '画面を表示' : 'Show screen';
       b.addEventListener('click', () => { const img = decodePngRgba(s.capture!); show(img.data, `${s.stepId} · ${t().lastCapture}`); });
-      head.prepend(b, ' ');
+      head.append(b);
     }
     return li;
   }));
@@ -224,6 +248,7 @@ async function refresh() {
   const has = await J.hasRepo();
   const meta = has ? await J.readMeta() : null;
   $('r-main').hidden = !meta;
+  $('r-build').hidden = !meta;
   $('j-export').toggleAttribute('disabled', !meta);
   $('j-wipe').toggleAttribute('disabled', !meta);
   $('b-build').toggleAttribute('disabled', !meta);
@@ -506,7 +531,7 @@ function bind() {
   });
   $('s-forget').addEventListener('click', () => {
     L.forgetKey();
-    $<HTMLInputElement>('s-key').placeholder = 'OpenAI API key (sk-…)';
+    $<HTMLInputElement>('s-key').placeholder = t().keyPh;
     $('r-run-status').textContent = t().keyForgotten;
   });
   $('s-models').addEventListener('click', async () => {

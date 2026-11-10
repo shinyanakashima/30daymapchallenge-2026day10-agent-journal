@@ -5,14 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Map Rewind Recorder</title>
   <meta name="description" content="Make a map with an AI, one step at a time. Each step is a Git commit in this browser; the steps become a Zarr array for the player.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Serif+JP:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
   <link rel="stylesheet" href="./src/record/record.css">
 </head>
 <body>
   <header class="r-top">
-    <h1>Map Rewind <span data-t="recorder">Recorder</span></h1>
+    <div>
+      <p class="kicker"><span class="brand">Map Rewind</span> <span class="tag">#30DayMapChallenge 2026 · Day 10: Prompting only</span></p>
+      <h1 data-t="recorder">Recorder</h1>
+    </div>
     <nav>
       <a href="./index.html" data-t="player">Player</a>
-      <button id="r-lang" type="button" lang="ja">日本語</button>
+      <button id="r-lang" class="lang" type="button"><span data-l="en" lang="en">EN</span> / <span data-l="ja" lang="ja">日本語</span></button>
     </nav>
   </header>
 
@@ -65,7 +71,7 @@
       <section class="r-settings" aria-labelledby="s-h">
         <h2 id="s-h" data-t="model">Model</h2>
         <div class="row">
-          <input id="s-key" type="password" autocomplete="off" spellcheck="false" placeholder="OpenAI API key (sk-…)" aria-label="OpenAI API key">
+          <input id="s-key" type="password" autocomplete="off" spellcheck="false" placeholder="OpenAI API key (sk-…)" data-tp="keyPh" aria-label="OpenAI API key">
           <button id="s-save" type="button" data-t="saveKey">Save key</button>
           <button id="s-forget" type="button" data-t="forgetKey">Forget key</button>
         </div>
@@ -79,7 +85,7 @@
       <ol class="r-steps" id="r-steps" aria-live="polite"></ol>
 
       <form id="r-chat" class="r-chat">
-        <textarea id="r-prompt" rows="4" placeholder="Ask for a change to the map…" aria-label="Prompt"></textarea>
+        <textarea id="r-prompt" rows="4" placeholder="Ask for a change to the map…" data-tp="promptPh" aria-label="Prompt"></textarea>
         <div class="row">
           <button id="r-send" type="submit" class="primary" data-t="send">Send</button>
           <span class="muted" data-t="sendHint">Ctrl+Enter</span>
@@ -103,7 +109,7 @@
     </section>
   </main>
 
-  <section class="r-build" aria-labelledby="b-h">
+  <section class="r-build" id="r-build" aria-labelledby="b-h">
     <h2 id="b-h" data-t="publish">Build for the player</h2>
     <div class="row">
       <button id="b-build" type="button" class="primary" data-t="build">Build Zarr and preview</button>

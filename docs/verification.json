@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-11-09T05:08:59.454Z",
+  "checkedAt": "2026-11-10T01:05:12.946Z",
   "session": "ui-fixture",
   "sessionKind": "fixture",
   "browser": "chromium 153.0.8010.12",
@@ -170,17 +170,17 @@
       "name": "language switch to Japanese",
       "ok": true,
       "lang": "ja",
-      "counter": "工程 2 / 5"
+      "counter": "工程 02 / 05"
     },
     {
       "name": "mobile: image, conversation, timeline stacked without horizontal scroll",
       "ok": true,
       "overflowX": 0,
-      "stageY": 161,
-      "sideY": 451.5,
-      "controlsY": 562.5,
+      "stageY": 227.140625,
+      "sideY": 524.640625,
+      "controlsY": 538.25,
       "controlsBottom": 0,
-      "stageW": 358,
+      "stageW": 346,
       "vw": 390
     },
     {

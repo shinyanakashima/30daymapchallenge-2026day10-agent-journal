@@ -108,6 +108,8 @@ function refreshStack() {
   if (view === 'layers' && stack) stack.setStep(current);
 }
 
+const pad = (n: number) => String(n).padStart(2, '0');
+
 function pickLang(): Lang {
   const q = params.get('lang');
   if (q === 'en' || q === 'ja') return q;
@@ -248,7 +250,9 @@ function renderControls() {
   scrub.value = String(current);
   const step = session.steps[current];
   scrub.setAttribute('aria-valuetext', `${s.step} ${current + 1} ${s.of} ${n}: ${step.changeSummary[lang]}`);
-  counter.textContent = `${s.step} ${current + 1} ${s.of} ${n}`;
+  const b = document.createElement('b');
+  b.textContent = pad(current + 1);
+  counter.replaceChildren(`${s.step} `, b, ` / ${pad(n)}`);
   prevBtn.disabled = current === 0;
   nextBtn.disabled = current === n - 1;
   playBtn.setAttribute('aria-pressed', String(playing));
@@ -292,7 +296,7 @@ function buildLog() {
     const num = document.createElement('button');
     num.type = 'button';
     num.className = 'step-num';
-    num.textContent = `${s.step} ${i + 1}`;
+    num.textContent = `${s.step} ${pad(i + 1)}`;
     num.addEventListener('click', () => { setPlaying(false); select(i); });
     head.append(num, ...stepBadges(step));
     const time = fmtTime(step.timestamp);
@@ -308,8 +312,9 @@ function buildLog() {
     if (step.revision) {
       const rev = document.createElement('code');
       rev.className = 'rev';
+      rev.title = step.revision;
       rev.textContent = step.revision.slice(0, 7);
-      sum.append(' ', rev);
+      head.append(rev);
     }
     const msgs = document.createElement('div');
     msgs.className = 'msgs';
@@ -336,6 +341,7 @@ function buildLog() {
     const b = document.createElement('span');
     b.className = `tick ${step.status}${step.frameIndex === null ? ' noframe' : ''}`;
     b.title = `${s.step} ${i + 1}`;
+    b.textContent = pad(i + 1);
     b.addEventListener('click', () => { setPlaying(false); select(i); });
     return b;
   }));
@@ -385,8 +391,7 @@ function renderLog() {
 function renderStatic() {
   const s = t(lang);
   document.documentElement.lang = lang;
-  langBtn.textContent = s.lang;
-  langBtn.lang = lang === 'en' ? 'ja' : 'en';
+  langBtn.dataset.lang = lang;
   langBtn.setAttribute('aria-label', s.langLabel);
   prevBtn.setAttribute('aria-label', s.prev);
   nextBtn.setAttribute('aria-label', s.next);
