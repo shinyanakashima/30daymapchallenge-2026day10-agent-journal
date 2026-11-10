@@ -30,6 +30,7 @@ const T = {
     needModel: 'Choose a model first.', ranOk: 'Drawn', ranFail: 'Failed', noCapture: 'no capture', saveSource: 'Save', source: 'Source', licence: 'Licence',
     remove: 'Remove', confirmWipe: 'Delete the journal stored in this browser? This cannot be undone.', keySaved: 'Key saved in this browser.',
     keyForgotten: 'Key removed from this browser.', modelsLoaded: 'models', building: 'Building…', blocked: 'Build stopped. Remove these before publishing:',
+    addSample: 'Add sample data', sampleNote: 'Sample: Hokkaido municipal boundaries (MLIT N03, CC BY 4.0) and 2025 census population (e-Stat). Joined by code.',
     studio: 'Studio', close: 'Close', noSteps: 'The journal has no steps yet. Send a prompt to start.',
     recordingMode: 'Recording mode — the journal is kept in this browser', modelNone: 'no model selected', openStudio: 'Open the studio to set the key and model',
     keyPh: 'OpenAI API key (sk-…)', promptPh: 'Ask for a change to the map…',
@@ -54,6 +55,7 @@ const T = {
     needModel: '先にモデルを選んでください。', ranOk: '描画', ranFail: '失敗', noCapture: '画像なし', saveSource: '保存', source: '出典', licence: 'ライセンス',
     remove: '削除', confirmWipe: 'このブラウザに保存されている記録を削除しますか？元に戻せません。', keySaved: 'キーをこのブラウザに保存しました。',
     keyForgotten: 'キーをこのブラウザから消去しました。', modelsLoaded: '個のモデル', building: '作成中…', blocked: '書き出しを止めました。公開前に次を取り除いてください：',
+    addSample: 'サンプルデータを追加', sampleNote: 'サンプル：北海道の市町村境界（国土数値情報N03、CC BY 4.0）と2025年国勢調査の人口（e-Stat）。code で結合できます。',
     studio: '制作パネル', close: '閉じる', noSteps: 'まだ工程がありません。プロンプトを送って始めてください。',
     recordingMode: '制作モード：記録はこのブラウザに保存されます', modelNone: 'モデル未選択', openStudio: '制作パネルでキーとモデルを設定',
     keyPh: 'OpenAI APIキー（sk-…）', promptPh: '地図への変更を依頼する…',
@@ -102,7 +104,11 @@ const PANEL = `
     <h3 data-t="dataFiles">Data files</h3>
     <p class="note" data-t="dataNote"></p>
     <ul id="d-list" class="d-list"></ul>
-    <label class="filebtn"><span data-t="addData">Add data files</span><input id="d-add" type="file" multiple></label>
+    <div class="btn-row">
+      <label class="filebtn"><span data-t="addData">Add data files</span><input id="d-add" type="file" multiple></label>
+      <button id="d-sample" type="button" data-t="addSample">Add sample data</button>
+    </div>
+    <p class="note" data-t="sampleNote"></p>
   </section>
   <section>
     <h3>map/main.js</h3>
@@ -241,7 +247,7 @@ async function renderData() {
     const form = document.createElement('form');
     form.className = 'src';
     form.innerHTML = `<input name="name" placeholder="${t().source}"><input name="license" placeholder="${t().licence}"><input name="url" type="url" placeholder="https://…"><button type="submit">${t().saveSource}</button><button type="button" class="rm">${t().remove}</button>`;
-    (form.elements.namedItem('name') as HTMLInputElement).value = src?.name.en ?? '';
+    (form.elements.namedItem('name') as HTMLInputElement).value = src?.name[host.lang()] ?? src?.name.en ?? '';
     (form.elements.namedItem('license') as HTMLInputElement).value = src?.license ?? '';
     (form.elements.namedItem('url') as HTMLInputElement).value = src?.url ?? '';
     form.addEventListener('submit', async (e) => {
@@ -267,6 +273,24 @@ async function renderData() {
   }
 }
 
+
+type SampleSources = { files: { path: string; source: { name: { en: string; ja: string }; license: string; url: string } }[] };
+
+/** Copy the bundled sample (public/samples/hokkaido-2025) into data/ with its sources. */
+async function addSample() {
+  const base = new URL(`${import.meta.env.BASE_URL}samples/hokkaido-2025/`, location.href);
+  const src = (await (await fetch(new URL('sources.json', base))).json()) as SampleSources;
+  const meta = (await J.readMeta())!;
+  for (const f of src.files) {
+    const res = await fetch(new URL(f.path, base));
+    if (!res.ok) throw new Error(`${f.path}: ${res.status}`);
+    const path = `data/${f.path}`;
+    await J.writeFile(path, new Uint8Array(await res.arrayBuffer()));
+    meta.dataSources = [...meta.dataSources.filter((d) => d.path !== path), { path, name: f.source.name, license: f.source.license, url: f.source.url }];
+  }
+  await J.writeMeta(meta);
+  await J.commitAll('Add sample data: Hokkaido municipalities and 2025 census population', author());
+}
 
 /** Re-read the journal and hand it to the player. */
 async function refresh(pick: 'first' | 'last' | 'keep') {
@@ -578,6 +602,17 @@ function bind() {
     }
   });
   $('s-model').addEventListener('change', () => { L.saveModel($<HTMLSelectElement>('s-model').value); renderModelLine(); });
+  $('d-sample').addEventListener('click', async () => {
+    setBusy(t().building);
+    try {
+      await addSample();
+    } catch (e) {
+      $('r-run-status').textContent = (e as Error).message;
+    } finally {
+      setBusy('');
+    }
+    await refresh('keep');
+  });
   $('rec-open').addEventListener('click', () => $<HTMLDialogElement>('rec-panel').showModal());
   $('rec-close').addEventListener('click', () => $<HTMLDialogElement>('rec-panel').close());
   $('r-model-line').addEventListener('click', () => $<HTMLDialogElement>('rec-panel').showModal());

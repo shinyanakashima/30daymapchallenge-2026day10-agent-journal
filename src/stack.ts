@@ -13,9 +13,9 @@ import type { Step } from './session';
 export type StackLabels = { step: string; failed: string; noCapture: string; selectStep: (n: number) => string };
 
 // Colours for the dark page.
-const INK = 0xebe6d8;
+const INK = 0xeeeae0;
 const ERR = 0xf06a58;
-const GROUND = 0x24231f;
+const GROUND = 0x1a1a18;
 const PW = 120; // plane width in scene units (4:3)
 const PD = 90;
 const DIFF_THRESHOLD = 24; // sum of |ΔR|+|ΔG|+|ΔB| treated as a change

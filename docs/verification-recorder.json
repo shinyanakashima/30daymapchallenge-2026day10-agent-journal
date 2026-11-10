@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-11-10T14:08:23.841Z",
+  "checkedAt": "2026-11-10T14:20:12.455Z",
   "browser": "chromium 153.0.8010.12",
   "note": "OpenAI API replaced by fixtures/ui-fixture/mock-replies.json",
   "sizes": {
@@ -9,7 +9,7 @@
     "pngBytes": 171226,
     "thumbChunkBytes": 61403
   },
-  "passed": 19,
+  "passed": 20,
   "failed": 0,
   "results": [
     {
@@ -209,6 +209,16 @@
         "blocked:TypeError",
         "blocked:SecurityError"
       ]
+    },
+    {
+      "name": "sample data loads with licences and draws as a map",
+      "ok": true,
+      "sources": [
+        "CC BY 4.0",
+        "Government of Japan Standard Terms of Use 2.0 (compatible with CC BY 4.0)"
+      ],
+      "state": "ready",
+      "error": false
     }
   ]
 }

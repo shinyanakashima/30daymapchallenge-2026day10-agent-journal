@@ -253,6 +253,34 @@ print(json.dumps({'shape': list(f.shape), 'tshape': list(t.shape), 'zarr': zarr.
     await c3.close();
   }
 
+  // ---- sample data: loads into the journal and can be drawn ----
+  {
+    const { context: c4, page: p5, errors: e5 } = await newRecorder();
+    const code = [
+      "const geo = data['data/municipalities.geojson'];",
+      "const pop = new Map(data['data/population_2025.csv'].map(d => [String(d.code).padStart(5, '0'), d]));",
+      "svg.append('rect').attr('width', width).attr('height', height).attr('fill', '#111');",
+      "const proj = d3.geoMercator().fitExtent([[40, 40], [width - 40, height - 40]], geo);",
+      "const color = d3.scaleDiverging(d3.interpolateRdBu).domain([-15, 0, 15]);",
+      "svg.append('g').selectAll('path').data(geo.features).join('path')",
+      "  .attr('d', d3.geoPath(proj))",
+      "  .attr('fill', f => pop.has(f.properties.code) ? color(pop.get(f.properties.code).change_pct) : '#444')",
+      "  .attr('stroke', '#111').attr('stroke-width', 0.5);",
+      "if (geo.features.length !== 185 || pop.size !== 179) throw new Error('unexpected sample size');",
+    ].join('\n');
+    const reply = 'Summary (en): Population change 2020–2025.\nSummary (ja): 2020〜2025年の人口増減。\n\n[test reply]\n```js\n' + code + '\n```\n';
+    await mockOpenAI(c4, [reply], []);
+    await createJournal(p5, 'sample-test', 'sample test', 'sample test', 'fixture');
+    await p5.click('#d-sample');
+    await p5.waitForFunction(() => document.querySelectorAll('#d-list li').length === 2, null, { timeout: 30000 });
+    const sources = await p5.evaluate(() => [...document.querySelectorAll('#d-list li [name=license]')].map((i) => i.value));
+    await send(p5, 'draw the sample');
+    const info = await p5.evaluate(() => ({ state: document.getElementById('stage').dataset.state, error: !!document.querySelector('#log > li.step .badge.error') }));
+    check('sample data loads with licences and draws as a map', sources.length === 2 && sources.every((x) => x) && info.state === 'ready' && !info.error && e5.length === 0, { sources, ...info });
+    if (process.env.VERIFY_SHOTS) await p5.screenshot({ path: `${process.env.VERIFY_SHOTS}/sample.png` });
+    await c4.close();
+  }
+
   if (writeFixture) {
     await rm('public/sessions/ui-fixture', { recursive: true, force: true });
     for (const [name, data] of Object.entries(sessionZip)) {

@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-11-10T14:08:50.611Z",
+  "checkedAt": "2026-11-10T14:20:35.998Z",
   "session": "ui-fixture",
   "sessionKind": "fixture",
   "browser": "chromium 153.0.8010.12",
@@ -176,11 +176,11 @@
       "name": "mobile: image, conversation, timeline stacked without horizontal scroll",
       "ok": true,
       "overflowX": 0,
-      "stageY": 227.140625,
-      "sideY": 524.640625,
-      "controlsY": 538.25,
+      "stageY": 172.921875,
+      "sideY": 481.421875,
+      "controlsY": 544.3125,
       "controlsBottom": 0,
-      "stageW": 346,
+      "stageW": 358,
       "vw": 390
     },
     {
