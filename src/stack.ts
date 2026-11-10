@@ -12,12 +12,16 @@ import type { Step } from './session';
  */
 export type StackLabels = { step: string; failed: string; noCapture: string; selectStep: (n: number) => string };
 
+// Colours for the dark page.
+const INK = 0xebe6d8;
+const ERR = 0xf06a58;
+const GROUND = 0x24231f;
 const PW = 120; // plane width in scene units (4:3)
 const PD = 90;
 const DIFF_THRESHOLD = 24; // sum of |ΔR|+|ΔG|+|ΔB| treated as a change
 const ALPHA_CHANGED = 255;
-const ALPHA_GHOST = 22;
-const ALPHA_GHOST_CURRENT = 120;
+const ALPHA_GHOST = 30;
+const ALPHA_GHOST_CURRENT = 255; // the selected step is shown whole
 
 type Layer = {
   group: THREE.Group;
@@ -73,11 +77,11 @@ export class StackView {
     const rx = PW / 2 + 8;
     const rz = -PD / 2;
     const top = (N - 1) * this.gap;
-    this.scene.add(line([new THREE.Vector3(rx, -2, rz), new THREE.Vector3(rx, top + 2, rz)], 0x000000, 0.9));
+    this.scene.add(line([new THREE.Vector3(rx, -2, rz), new THREE.Vector3(rx, top + 2, rz)], INK, 0.9));
     // Ground under the first layer.
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(PW + 14, PD + 14),
-      new THREE.MeshBasicMaterial({ color: 0xe4dfd2, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }),
+      new THREE.MeshBasicMaterial({ color: GROUND, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide }),
     );
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -1.2;
@@ -88,10 +92,10 @@ export class StackView {
       const y = i * this.gap;
       const group = new THREE.Group();
       group.position.y = y;
-      const outline = rect(PW, PD, 0x000000, 0.5);
+      const outline = rect(PW, PD, INK, 0.5);
       group.add(outline);
       this.scene.add(group);
-      const tick = line([new THREE.Vector3(rx, y, rz), new THREE.Vector3(rx + 3, y, rz)], 0x000000, 0.9);
+      const tick = line([new THREE.Vector3(rx, y, rz), new THREE.Vector3(rx + 3, y, rz)], INK, 0.9);
       this.scene.add(tick);
       const button = document.createElement('button');
       button.type = 'button';
@@ -187,7 +191,7 @@ export class StackView {
       }
       const om = layer.outline.material as THREE.LineBasicMaterial;
       const failed = step.status === 'error';
-      om.color.set(failed && past ? 0xc8312a : 0x000000);
+      om.color.set(failed && past ? ERR : INK);
       om.opacity = !past ? 0.12 : isCur ? 0.95 : step.frameIndex === null ? 0.55 : 0.4;
       (layer.tick.material as THREE.LineBasicMaterial).opacity = past ? 0.9 : 0.25;
       const b = layer.button;

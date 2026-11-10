@@ -1,21 +1,21 @@
 /* Map Rewind — editorial map style shared with Day 8: paper, ink, hairlines, serif. */
 :root {
-  --paper: #f4f1ea;
-  --paper-2: #ebe6da;
-  --panel: #faf8f3;
-  --ink: #111110;
-  --ink-2: #3b3a36;
-  --muted: #77736a;
-  --rule: #111110;
-  --hair: #cfc8b8;
-  --ok: #1f7a46;
-  --err: #c8312a;
-  --hi: #e9e2cf;
+  --paper: #121211;
+  --paper-2: #1d1c19;
+  --panel: #181816;
+  --ink: #ebe6d8;
+  --ink-2: #c3bdae;
+  --muted: #8c877b;
+  --rule: #ebe6d8;
+  --hair: #36342e;
+  --ok: #5fc28a;
+  --err: #f06a58;
+  --hi: #26241f;
   --serif: "Source Serif 4", "Noto Serif JP", Georgia, "Hiragino Mincho ProN", serif;
   --sans: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
   --side-w: 400px;
-  color-scheme: light;
+  color-scheme: dark;
 }
 *, ::before, ::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -78,7 +78,7 @@ button:disabled { opacity: .3; cursor: default; }
   font: 500 11px/1 var(--mono);
   letter-spacing: .08em;
   padding: 4px 6px;
-  background: repeating-linear-gradient(135deg, var(--ink) 0 3px, #3a3935 3px 6px);
+  background: repeating-linear-gradient(135deg, var(--ink) 0 3px, color-mix(in srgb, var(--ink) 70%, var(--paper)) 3px 6px);
   color: var(--paper);
 }
 .local-note::before { content: "LOCAL"; background: var(--ink); }
@@ -117,7 +117,7 @@ button:disabled { opacity: .3; cursor: default; }
 .stack-gl { display: block; width: 100% !important; height: 100% !important; cursor: grab; touch-action: none; }
 .stack-gl:active { cursor: grabbing; }
 .stack-labels { position: absolute; inset: 0; pointer-events: none; }
-.stack .sl { pointer-events: auto; font: 12.5px/1.3 var(--serif); color: var(--ink); background: rgba(244,241,234,.92); border: 1px solid var(--ink); padding: 1px 6px; white-space: nowrap; max-width: 24em; overflow: hidden; text-overflow: ellipsis; }
+.stack .sl { pointer-events: auto; font: 12.5px/1.3 var(--serif); color: var(--ink); background: color-mix(in srgb, var(--paper) 90%, transparent); border: 1px solid var(--ink); padding: 1px 6px; white-space: nowrap; max-width: 24em; overflow: hidden; text-overflow: ellipsis; }
 .stack .sl:hover { background: var(--hi); }
 .stack .sl.sel { background: var(--ink); color: var(--paper); white-space: normal; width: max-content; max-width: 14em; text-align: left; }
 .stack .sl.failed { color: var(--err); border-color: var(--err); }
@@ -183,7 +183,7 @@ button:disabled { opacity: .3; cursor: default; }
 .buttons button { width: 40px; height: 36px; font-size: 18px; line-height: 1; display: grid; place-items: center; }
 .buttons button + button { border-left: 0; }
 #play { background: var(--ink); color: var(--paper); font-size: 14px; }
-#play:hover:not(:disabled) { background: #000; }
+#play:hover:not(:disabled) { background: #fff; }
 .counter { margin-left: 16px; font: 13px/1 var(--mono); color: var(--muted); letter-spacing: .04em; white-space: nowrap; }
 .counter b { font: 600 22px/1 var(--serif); color: var(--ink); letter-spacing: 0; vertical-align: -2px; }
 .track { flex: 1; min-width: 0; position: relative; padding-top: 2px; }

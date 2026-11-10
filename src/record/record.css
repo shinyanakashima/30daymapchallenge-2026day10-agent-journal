@@ -1,11 +1,11 @@
 /* Recorder — same editorial style as the player. */
 :root {
-  --paper: #f4f1ea; --paper-2: #ebe6da; --panel: #faf8f3; --ink: #111110; --ink-2: #3b3a36; --muted: #77736a;
-  --hair: #cfc8b8; --ok: #1f7a46; --err: #c8312a; --hi: #e9e2cf;
+  --paper: #121211; --paper-2: #1d1c19; --panel: #181816; --ink: #ebe6d8; --ink-2: #c3bdae; --muted: #8c877b;
+  --hair: #36342e; --ok: #5fc28a; --err: #f06a58; --hi: #26241f;
   --serif: "Source Serif 4", "Noto Serif JP", Georgia, "Hiragino Mincho ProN", serif;
   --sans: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
-  color-scheme: light;
+  color-scheme: dark;
 }
 *, ::before, ::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -15,7 +15,7 @@ button, .filebtn span { font: 14px/1.2 var(--serif); color: inherit; background:
 button:hover:not(:disabled), .filebtn:hover span { background: var(--hi); }
 button:disabled { opacity: .3; cursor: default; }
 button.primary { background: var(--ink); color: var(--paper); }
-button.primary:hover:not(:disabled) { background: #000; }
+button.primary:hover:not(:disabled) { background: #fff; }
 button.danger { color: var(--err); border-color: var(--err); }
 .filebtn { position: relative; display: inline-block; }
 .filebtn input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
@@ -118,7 +118,7 @@ h2 { font: 500 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .1
 
 dialog { border: 1px solid var(--ink); background: var(--paper); max-width: 520px; width: calc(100% - 32px); padding: 22px 24px; }
 dialog h2 { margin-top: 0; border-top: 0; padding-top: 0; font: 600 22px/1.2 var(--serif); text-transform: none; letter-spacing: 0; }
-dialog::backdrop { background: rgb(17 17 16 / .4); }
+dialog::backdrop { background: rgb(0 0 0 / .6); }
 dialog .row { justify-content: flex-end; margin-top: 12px; }
 
 @media (max-width: 900px) {
