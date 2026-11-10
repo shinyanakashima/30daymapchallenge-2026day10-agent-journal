@@ -261,7 +261,7 @@ function renderControls() {
   const n = session.steps.length;
   scrub.max = String(n - 1);
   scrub.value = String(current);
-  scrub.style.setProperty('--pct', n > 1 ? `${(current / (n - 1)) * 100}%` : '0%');
+  (scrub.parentElement as HTMLElement).style.setProperty('--pct', n > 1 ? `calc(7px + (100% - 14px) * ${current / (n - 1)})` : '7px');
   const step = session.steps[current];
   scrub.setAttribute('aria-valuetext', `${s.step} ${current + 1} ${s.of} ${n}: ${step.changeSummary[lang]}`);
   const b = document.createElement('b');
